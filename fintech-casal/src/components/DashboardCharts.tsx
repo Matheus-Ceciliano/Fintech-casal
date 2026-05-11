@@ -144,7 +144,7 @@ export function DashboardCharts({
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+                  formatter={(value: any) => `R$ ${Number(value).toFixed(2)}`}
                   contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px', color: '#fff' }}
                   itemStyle={{ color: '#fff' }}
                 />

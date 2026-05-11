@@ -101,7 +101,7 @@ export function ExpensePieChartCard({ transactions }: { transactions: Transactio
                 {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
               </Pie>
               <Tooltip 
-                formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+                formatter={(value: any) => `R$ ${Number(value).toFixed(2)}`}
                 contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px', color: '#fff' }}
                 itemStyle={{ color: '#fff' }}
               />
@@ -139,7 +139,7 @@ export function IncomePieChartCard({ myIncome, partnerIncome, partnerName }: { m
                 {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
               </Pie>
               <Tooltip 
-                formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+                formatter={(value: any) => `R$ ${Number(value).toFixed(2)}`}
                 contentStyle={{ backgroundColor: '#064e3b', borderColor: '#047857', borderRadius: '8px', color: '#fff' }}
                 itemStyle={{ color: '#fff' }}
               />

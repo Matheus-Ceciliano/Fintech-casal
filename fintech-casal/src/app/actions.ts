@@ -5,8 +5,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 export async function addTransaction(formData: FormData) {
-  const cookieStore = await cookies();
-  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  const supabase = createServerActionClient({ cookies });
 
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
@@ -52,8 +51,7 @@ export async function addTransaction(formData: FormData) {
 }
 
 export async function seedDummyData() {
-  const cookieStore = await cookies();
-  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  const supabase = createServerActionClient({ cookies });
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return;
@@ -104,8 +102,7 @@ export async function seedDummyData() {
 }
 
 export async function addGoal(formData: FormData) {
-  const cookieStore = await cookies();
-  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  const supabase = createServerActionClient({ cookies });
 
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
@@ -147,8 +144,7 @@ export async function addGoal(formData: FormData) {
 }
 
 export async function depositToGoal(formData: FormData) {
-  const cookieStore = await cookies();
-  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  const supabase = createServerActionClient({ cookies });
 
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
@@ -203,8 +199,7 @@ export async function depositToGoal(formData: FormData) {
 }
 
 export async function withdrawFromGoal(formData: FormData) {
-  const cookieStore = await cookies();
-  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  const supabase = createServerActionClient({ cookies });
 
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
