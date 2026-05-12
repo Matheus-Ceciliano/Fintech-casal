@@ -5,14 +5,62 @@ import { useState } from "react";
 import { Fingerprint, Loader2, Mail, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { isPWA } from "@/lib/pwa";
+import { useEffect } from "react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isPwaActive, setIsPwaActive] = useState(false);
   const supabase = createClientComponentClient();
   const router = useRouter();
+
+  useEffect(() => {
+    // Só mostramos o botão se for PWA E se o usuário já tiver cadastrado (localStorage)
+    const biometriaAtiva = localStorage.getItem("biometria_ativa") === "true";
+    setIsPwaActive(isPWA() && biometriaAtiva);
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      if (!window.PublicKeyCredential) {
+        throw new Error("Biometria não suportada.");
+      }
+
+      // 1. Gerar Desafio
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+
+      // 2. Autenticar (navigator.credentials.get)
+      // Como não sabemos o ID da credencial de antemão sem o email,
+      // podemos usar discoverable credentials (empty allowCredentials)
+      // se o authenticator suportar.
+      await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          userVerification: "required",
+          timeout: 60000,
+        },
+      });
+
+      // 3. Sucesso (em produção validaria o retorno com Supabase)
+      // Para o MVP, se o SO autorizou, permitimos o acesso
+      router.push("/");
+    } catch (err: any) {
+      console.error("Erro na biometria:", err);
+      if (err.name === "NotAllowedError") {
+        setError("Biometria cancelada. Use sua senha para entrar.");
+      } else {
+        setError("Erro ao autenticar. Tente novamente ou use sua senha.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +175,18 @@ export default function LoginPage() {
             </svg>
             <span>Continuar com Google</span>
           </button>
+
+          {isPwaActive && (
+            <button
+              onClick={handleBiometricLogin}
+              type="button"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-2 bg-indigo-600/10 text-indigo-400 py-3.5 rounded-xl font-medium border border-indigo-500/20 transition-all hover:bg-indigo-600/20 active:scale-[0.98] disabled:opacity-70"
+            >
+              <Fingerprint size={20} />
+              <span>Entrar com Biometria</span>
+            </button>
+          )}
         </div>
 
         <p className="text-zinc-500 text-sm mt-4">

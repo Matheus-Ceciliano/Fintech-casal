@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Fingerprint, Lock } from "lucide-react";
 
+import { isPWA } from "@/lib/pwa";
+
 export function AppLockProvider({
   children,
   requireLock,
@@ -10,10 +12,15 @@ export function AppLockProvider({
   children: React.ReactNode;
   requireLock: boolean;
 }) {
-  // Inicialmente assumimos que está bloqueado se requireLock for true
-  // Só desbloqueia após validação bem sucedida.
-  const [isLocked, setIsLocked] = useState(requireLock);
+  const [isLocked, setIsLocked] = useState(false);
   const [authFailed, setAuthFailed] = useState(false);
+
+  useEffect(() => {
+    // Só bloqueia se requireLock for true E for PWA
+    if (requireLock && isPWA()) {
+      setIsLocked(true);
+    }
+  }, [requireLock]);
 
   useEffect(() => {
     // Se o usuário ativar o bloqueio, tentamos autenticar assim que carregar

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Fingerprint, X, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { isPWA } from "@/lib/pwa";
 
 export function BiometricOptIn({ userId }: { userId: string }) {
   const [isVisible, setIsVisible] = useState(false);
@@ -12,9 +13,9 @@ export function BiometricOptIn({ userId }: { userId: string }) {
   const supabase = createClientComponentClient();
 
   useEffect(() => {
-    // Só mostramos se não houver um "declined" no local storage e se suportado
+    // Só mostramos se não houver um "declined" no local storage, se suportado e se for PWA
     const hasDeclined = localStorage.getItem("declined_biometrics");
-    if (!hasDeclined && window.PublicKeyCredential) {
+    if (!hasDeclined && window.PublicKeyCredential && isPWA()) {
       // Dá um pequeno atraso para a tela principal carregar antes do modal aparecer
       const timer = setTimeout(() => setIsVisible(true), 1500);
       return () => clearTimeout(timer);

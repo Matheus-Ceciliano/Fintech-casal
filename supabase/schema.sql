@@ -164,3 +164,24 @@ USING (
   bucket_id = 'receipts' AND 
   auth.role() = 'authenticated'
 );
+
+-- ==========================================
+-- 6. WEB AUTHENTICATION (PASSKEYS)
+-- ==========================================
+
+-- Tabela: passkey_credentials (WebAuthn / Passkeys)
+CREATE TABLE passkey_credentials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  credential_id TEXT NOT NULL UNIQUE,
+  public_key TEXT NOT NULL,
+  counter INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE passkey_credentials ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage their own passkeys" 
+ON passkey_credentials FOR ALL 
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());

@@ -7,6 +7,7 @@ import { AreaChartCard, ExpensePieChartCard, IncomePieChartCard } from "@/compon
 import { AddTransactionModal } from "@/components/AddTransactionModal";
 import { InvitePartnerCard } from "@/components/InvitePartnerCard";
 import { seedDummyData } from "@/app/actions";
+import { isPWA } from "@/lib/pwa";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
