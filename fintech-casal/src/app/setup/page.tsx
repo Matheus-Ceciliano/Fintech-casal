@@ -40,11 +40,14 @@ export default function SetupPage() {
 
       if (coupleError) throw coupleError;
 
-      // 2. Atualiza o perfil do usuário atual com o couple_id criado
+      // 2. Vincula o usuário ao grupo (usa upsert para caso o perfil tenha sido apagado mas o auth continue)
       const { error: profileError, data: updatedProfiles } = await supabase
         .from("profiles")
-        .update({ couple_id: coupleData.id })
-        .eq("id", userData.user.id)
+        .upsert({ 
+          id: userData.user.id,
+          couple_id: coupleData.id,
+          full_name: userData.user.user_metadata?.full_name || ""
+        })
         .select();
 
       if (profileError) throw profileError;
@@ -84,11 +87,14 @@ export default function SetupPage() {
 
       if (coupleError || !coupleData) throw new Error("Código inválido ou não encontrado.");
 
-      // 2. Atualiza o perfil do usuário atual
+      // 2. Vincula o usuário ao grupo
       const { error: profileError, data: updatedProfiles } = await supabase
         .from("profiles")
-        .update({ couple_id: coupleData.id })
-        .eq("id", userData.user.id)
+        .upsert({ 
+          id: userData.user.id,
+          couple_id: coupleData.id,
+          full_name: userData.user.user_metadata?.full_name || ""
+        })
         .select();
 
       if (profileError) throw profileError;
