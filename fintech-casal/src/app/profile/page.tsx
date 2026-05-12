@@ -3,18 +3,30 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, LogOut, Fingerprint, Shield, Bell, Moon, ChevronRight } from "lucide-react";
+import { User, LogOut, Shield, Bell, Moon, ChevronRight, Lock, Delete } from "lucide-react";
 import { isPWA } from "@/lib/pwa";
+import { hashPin, getStoredPinHash, setStoredPinHash, clearPin } from "@/lib/pin";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isPwaActive, setIsPwaActive] = useState(false);
+  const [hasPin, setHasPin] = useState(false);
+  
+  // PIN Setup State
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [setupStep, setSetupStep] = useState<"create" | "confirm">("create");
+  const [tempPin, setTempPin] = useState("");
+  const [setupPin, setSetupPin] = useState("");
+  const [setupError, setSetupError] = useState(false);
+
   const supabase = createClientComponentClient();
   const router = useRouter();
 
   useEffect(() => {
     setIsPwaActive(isPWA());
+    setHasPin(!!getStoredPinHash());
     getProfile();
   }, []);
 
@@ -41,99 +53,55 @@ export default function ProfilePage() {
     }
   }
 
-  const handleRegisterBiometrics = async () => {
-    setLoading(true);
-    try {
-      if (!window.PublicKeyCredential) {
-        throw new Error("Seu navegador não suporta biometria.");
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Usuário não autenticado.");
-
-      // 1. Gerar Desafio (Challenge)
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
-      const userHandle = new Uint8Array(16);
-      window.crypto.getRandomValues(userHandle);
-
-      // 2. Criar Credencial
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge,
-          rp: { name: "FinCasal", id: window.location.hostname },
-          user: {
-            id: userHandle,
-            name: session.user.email || "usuario",
-            displayName: profile?.full_name || "Usuário",
-          },
-          pubKeyCredParams: [
-            { type: "public-key", alg: -7 },   // ES256
-            { type: "public-key", alg: -257 }, // RS256
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: "platform",
-            userVerification: "required",
-            residentKey: "preferred",
-          },
-          attestation: "none",
-          timeout: 60000,
-        },
-      }) as PublicKeyCredential;
-
-      if (!credential) throw new Error("Falha ao criar credencial.");
-
-      // 3. Converter para salvar no Supabase (Base64 seguro para grandes arrays)
-      const bufferToBase64 = (buffer: ArrayBuffer) => {
-        const bytes = new Uint8Array(buffer);
-        let binary = "";
-        for (let i = 0; i < bytes.byteLength; i++) {
-          binary += String.fromCharCode(bytes[i]);
-        }
-        return btoa(binary);
-      };
-
-      const credentialId = bufferToBase64(credential.rawId);
-      const response = credential.response as any;
-      const publicKey = response.getPublicKey ? bufferToBase64(response.getPublicKey()) : "";
-
-      // 4. Salvar no Supabase
-      const { error: dbError } = await supabase
-        .from("passkey_credentials")
-        .insert({
-          user_id: session.user.id,
-          credential_id: credentialId,
-          public_key: publicKey,
-          counter: 0,
-        });
-
-      if (dbError) throw dbError;
-
-      // 5. Atualizar perfil e localStorage
-      await supabase
-        .from("profiles")
-        .update({ has_biometrics: true })
-        .eq("id", session.user.id);
-
-      localStorage.setItem("biometria_ativa", "true");
-      setProfile({ ...profile, has_biometrics: true });
-      alert("Biometria cadastrada com sucesso!");
-    } catch (error: any) {
-      console.error("Erro no registro:", error);
-      if (error.name === "NotAllowedError") {
-        alert("Operação cancelada pelo usuário.");
-      } else {
-        alert(error.message || "Erro ao cadastrar biometria.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  };
+
+  const startPinSetup = () => {
+    setSetupStep("create");
+    setSetupPin("");
+    setTempPin("");
+    setShowPinSetup(true);
+    setSetupError(false);
+  };
+
+  const handlePinDigit = (digit: string) => {
+    setSetupError(false);
+    const currentPin = setupPin + digit;
+    if (currentPin.length <= 6) {
+      setSetupPin(currentPin);
+      if (currentPin.length === 6) {
+        if (setupStep === "create") {
+          setTempPin(currentPin);
+          setSetupPin("");
+          setSetupStep("confirm");
+        } else {
+          if (currentPin === tempPin) {
+            completePinSetup(currentPin);
+          } else {
+            setSetupError(true);
+            setSetupPin("");
+          }
+        }
+      }
+    }
+  };
+
+  const completePinSetup = async (pin: string) => {
+    const hash = await hashPin(pin);
+    setStoredPinHash(hash);
+    setHasPin(true);
+    setShowPinSetup(false);
+    alert("PIN configurado com sucesso!");
+  };
+
+  const handleRemovePin = () => {
+    if (confirm("Deseja realmente remover o PIN de acesso rápido?")) {
+      clearPin();
+      setHasPin(false);
+    }
   };
 
   if (loading) {
@@ -175,20 +143,20 @@ export default function ProfilePage() {
 
             {isPwaActive && (
               <div 
-                onClick={handleRegisterBiometrics}
+                onClick={hasPin ? handleRemovePin : startPinSetup}
                 className="p-4 flex items-center justify-between border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
-                    <Fingerprint size={20} />
+                    <Lock size={20} />
                   </div>
                   <div className="flex flex-col">
-                    <span>Ativar Biometria</span>
-                    <span className="text-[10px] text-zinc-500">Apenas disponível no PWA</span>
+                    <span>PIN de Acesso Rápido</span>
+                    <span className="text-[10px] text-zinc-500">{hasPin ? "PIN Ativo (Clique para remover)" : "Configurar PIN de 6 dígitos"}</span>
                   </div>
                 </div>
-                <div className={`w-10 h-5 rounded-full relative transition-colors ${profile?.has_biometrics ? 'bg-indigo-600' : 'bg-zinc-700'}`}>
-                   <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${profile?.has_biometrics ? 'left-6' : 'left-1'}`}></div>
+                <div className={`w-10 h-5 rounded-full relative transition-colors ${hasPin ? 'bg-indigo-600' : 'bg-zinc-700'}`}>
+                   <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${hasPin ? 'left-6' : 'left-1'}`}></div>
                 </div>
               </div>
             )}
@@ -236,6 +204,82 @@ export default function ProfilePage() {
           FinCasal v1.0.0
         </div>
       </div>
+
+      {/* PIN Setup Overlay */}
+      <AnimatePresence>
+        {showPinSetup && (
+          <motion.div 
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            className="fixed inset-0 z-[300] bg-zinc-950 flex flex-col items-center p-8"
+          >
+            <div className="w-full max-w-md flex flex-col items-center h-full">
+              <div className="flex justify-between w-full mb-12">
+                <button onClick={() => setShowPinSetup(false)} className="text-zinc-400 hover:text-white">Cancelar</button>
+                <div className="text-indigo-400 font-bold uppercase tracking-tighter">Novo PIN</div>
+                <div className="w-12"></div>
+              </div>
+
+              <div className="flex flex-col items-center space-y-4 mb-12">
+                <div className="w-16 h-16 bg-indigo-600/20 text-indigo-400 rounded-2xl flex items-center justify-center">
+                  <Lock size={32} />
+                </div>
+                <h2 className="text-xl font-bold">
+                  {setupStep === "create" ? "Crie seu PIN de 6 dígitos" : "Confirme seu PIN"}
+                </h2>
+                <p className="text-zinc-500 text-center text-sm">
+                  {setupStep === "create" 
+                    ? "Escolha uma combinação numérica para acessar o app rapidamente." 
+                    : "Digite novamente para confirmar o PIN."}
+                </p>
+              </div>
+
+              {/* Indicators */}
+              <div className="flex space-x-4 mb-12">
+                {[...Array(6)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-4 h-4 rounded-full border border-zinc-800 transition-colors ${
+                      setupPin.length > i ? "bg-indigo-600 border-indigo-600" : "bg-transparent"
+                    } ${setupError ? "bg-rose-500 border-rose-500" : ""}`}
+                  />
+                ))}
+              </div>
+
+              {setupError && (
+                <p className="text-rose-500 text-sm mb-6 animate-pulse">Os PINs não coincidem. Tente novamente.</p>
+              )}
+
+              {/* Pad */}
+              <div className="w-full grid grid-cols-3 gap-4 mt-auto max-w-xs mb-8">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => handlePinDigit(num.toString())}
+                    className="h-16 bg-zinc-900 border border-zinc-800 text-xl font-bold rounded-2xl active:bg-indigo-600 transition-colors"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <div />
+                <button
+                  onClick={() => handlePinDigit("0")}
+                  className="h-16 bg-zinc-900 border border-zinc-800 text-xl font-bold rounded-2xl active:bg-indigo-600 transition-colors"
+                >
+                  0
+                </button>
+                <button
+                  onClick={() => setSetupPin(prev => prev.slice(0, -1))}
+                  className="h-16 flex items-center justify-center text-zinc-500 active:text-white"
+                >
+                  <Delete size={24} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

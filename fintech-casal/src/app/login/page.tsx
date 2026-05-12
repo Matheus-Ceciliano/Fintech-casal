@@ -1,12 +1,13 @@
 "use client";
 
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useState } from "react";
-import { Fingerprint, Loader2, Mail, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Fingerprint, Loader2, Mail, Lock, Key } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { isPWA } from "@/lib/pwa";
-import { useEffect } from "react";
+import { getStoredPinHash } from "@/lib/pin";
+import { PinScreen } from "@/components/PinScreen";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -14,55 +15,17 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isPwaActive, setIsPwaActive] = useState(false);
+  const [pinHash, setPinHash] = useState<string | null>(null);
+  const [showPinScreen, setShowPinScreen] = useState(false);
+
   const supabase = createClientComponentClient();
   const router = useRouter();
 
   useEffect(() => {
-    // Só mostramos o botão se for PWA E se o usuário já tiver cadastrado (localStorage)
-    const biometriaAtiva = localStorage.getItem("biometria_ativa") === "true";
-    setIsPwaActive(isPWA() && biometriaAtiva);
+    const hash = getStoredPinHash();
+    setPinHash(hash);
+    setIsPwaActive(isPWA());
   }, []);
-
-  const handleBiometricLogin = async () => {
-    setIsLoading(true);
-    setError("");
-    try {
-      if (!window.PublicKeyCredential) {
-        throw new Error("Biometria não suportada.");
-      }
-
-      // 1. Gerar Desafio
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
-
-      // 2. Autenticar (navigator.credentials.get)
-      // Como não sabemos o ID da credencial de antemão sem o email,
-      // podemos usar discoverable credentials (empty allowCredentials)
-      // se o authenticator suportar.
-      await navigator.credentials.get({
-        publicKey: {
-          challenge,
-          userVerification: "required",
-          // @ts-ignore - authenticatorAttachment é usado como hint em alguns browsers para forçar o local
-          authenticatorAttachment: "platform",
-          timeout: 60000,
-        },
-      });
-
-      // 3. Sucesso (em produção validaria o retorno com Supabase)
-      // Para o MVP, se o SO autorizou, permitimos o acesso
-      router.push("/");
-    } catch (err: any) {
-      console.error("Erro na biometria:", err);
-      if (err.name === "NotAllowedError") {
-        setError("Biometria cancelada. Use sua senha para entrar.");
-      } else {
-        setError("Erro ao autenticar. Tente novamente ou use sua senha.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,14 +64,24 @@ export default function LoginPage() {
     }
   };
 
+  if (showPinScreen && pinHash) {
+    return (
+      <PinScreen 
+        storedHash={pinHash}
+        onSuccess={() => router.push("/")}
+        onFallback={() => setShowPinScreen(false)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 p-6 overflow-hidden">
       <div className="w-full max-w-sm flex flex-col items-center space-y-8">
         
         {/* Logo / Title */}
         <div className="flex flex-col items-center space-y-2">
-          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-            <Fingerprint className="text-white" size={32} />
+          <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20 overflow-hidden border border-zinc-800">
+            <img src="/icons/icon-192x192.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">FinCasal</h1>
           <p className="text-sm text-zinc-400 text-center">
@@ -178,15 +151,15 @@ export default function LoginPage() {
             <span>Continuar com Google</span>
           </button>
 
-          {isPwaActive && (
+          {isPwaActive && pinHash && (
             <button
-              onClick={handleBiometricLogin}
+              onClick={() => setShowPinScreen(true)}
               type="button"
               disabled={isLoading}
               className="w-full flex items-center justify-center space-x-2 bg-indigo-600/10 text-indigo-400 py-3.5 rounded-xl font-medium border border-indigo-500/20 transition-all hover:bg-indigo-600/20 active:scale-[0.98] disabled:opacity-70"
             >
-              <Fingerprint size={20} />
-              <span>Entrar com Biometria</span>
+              <Key size={20} />
+              <span>Entrar com PIN</span>
             </button>
           )}
         </div>
