@@ -43,6 +43,8 @@ export default function LoginPage() {
         publicKey: {
           challenge,
           userVerification: "required",
+          // @ts-ignore - authenticatorAttachment é usado como hint em alguns browsers para forçar o local
+          authenticatorAttachment: "platform",
           timeout: 60000,
         },
       });

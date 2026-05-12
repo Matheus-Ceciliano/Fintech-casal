@@ -74,7 +74,9 @@ export default function ProfilePage() {
           authenticatorSelection: {
             authenticatorAttachment: "platform",
             userVerification: "required",
+            residentKey: "preferred",
           },
+          attestation: "none",
           timeout: 60000,
         },
       }) as PublicKeyCredential;
