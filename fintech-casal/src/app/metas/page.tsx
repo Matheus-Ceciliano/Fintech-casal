@@ -22,7 +22,9 @@ function formatRelativeDate(dateStr: string) {
 }
 
 export default async function MetasPage() {
-  const supabase = createServerComponentClient({ cookies });
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
   const {
     data: { session },

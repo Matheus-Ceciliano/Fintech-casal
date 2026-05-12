@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   const requestUrl = new URL(request.url);
-  const supabase = createRouteHandlerClient({ cookies });
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   await supabase.auth.signOut();
 

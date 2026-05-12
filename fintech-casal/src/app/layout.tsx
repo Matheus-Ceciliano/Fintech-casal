@@ -40,7 +40,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = createServerComponentClient({ cookies });
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return but next 15+ types it as async
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
   const { data: { session } } = await supabase.auth.getSession();
   
   let hasBiometrics = false;

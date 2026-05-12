@@ -5,7 +5,9 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 export async function addTransaction(formData: FormData) {
-  const supabase = createServerActionClient({ cookies });
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
 
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
@@ -51,7 +53,9 @@ export async function addTransaction(formData: FormData) {
 }
 
 export async function seedDummyData() {
-  const supabase = createServerActionClient({ cookies });
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return;
@@ -102,7 +106,9 @@ export async function seedDummyData() {
 }
 
 export async function addGoal(formData: FormData) {
-  const supabase = createServerActionClient({ cookies });
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
 
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
@@ -144,7 +150,9 @@ export async function addGoal(formData: FormData) {
 }
 
 export async function depositToGoal(formData: FormData) {
-  const supabase = createServerActionClient({ cookies });
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
 
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
@@ -199,7 +207,9 @@ export async function depositToGoal(formData: FormData) {
 }
 
 export async function withdrawFromGoal(formData: FormData) {
-  const supabase = createServerActionClient({ cookies });
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
 
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
