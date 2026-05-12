@@ -3,7 +3,7 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, LogOut, Shield, Bell, Moon, ChevronRight, Lock, Delete } from "lucide-react";
+import { User, LogOut, Shield, Bell, Moon, ChevronRight, Lock, Delete, Fingerprint } from "lucide-react";
 import { isPWA } from "@/lib/pwa";
 import { hashPin, getStoredPinHash, setStoredPinHash, clearPin } from "@/lib/pin";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,6 +13,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isPwaActive, setIsPwaActive] = useState(false);
   const [hasPin, setHasPin] = useState(false);
+  const [hasBiometrics, setHasBiometrics] = useState(false);
+  const [canUseBiometrics, setCanUseBiometrics] = useState(false);
   
   // PIN Setup State
   const [showPinSetup, setShowPinSetup] = useState(false);
@@ -27,8 +29,18 @@ export default function ProfilePage() {
   useEffect(() => {
     setIsPwaActive(isPWA());
     setHasPin(!!getStoredPinHash());
+    setHasBiometrics(localStorage.getItem("biometria_preferida") === "true");
+    checkBiometricSupport();
     getProfile();
   }, []);
+
+  const checkBiometricSupport = async () => {
+    if (window.PublicKeyCredential && 
+        PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      setCanUseBiometrics(available);
+    }
+  };
 
   async function getProfile() {
     try {
@@ -101,6 +113,39 @@ export default function ProfilePage() {
     if (confirm("Deseja realmente remover o PIN de acesso rápido?")) {
       clearPin();
       setHasPin(false);
+      setHasBiometrics(false);
+      localStorage.removeItem("biometria_preferida");
+    }
+  };
+
+  const toggleBiometrics = async () => {
+    if (!hasBiometrics) {
+      // Ativar
+      try {
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+        
+        // Solicita biometria uma vez para confirmar
+        await navigator.credentials.get({
+          publicKey: {
+            challenge,
+            userVerification: "required",
+            // @ts-ignore
+            authenticatorAttachment: "platform",
+            timeout: 60000,
+          }
+        });
+
+        localStorage.setItem("biometria_preferida", "true");
+        setHasBiometrics(true);
+        alert("Biometria ativada com sucesso!");
+      } catch (e) {
+        console.error("Falha ao ativar biometria:", e);
+      }
+    } else {
+      // Desativar
+      localStorage.removeItem("biometria_preferida");
+      setHasBiometrics(false);
     }
   };
 
@@ -142,23 +187,45 @@ export default function ProfilePage() {
             </div>
 
             {isPwaActive && (
-              <div 
-                onClick={hasPin ? handleRemovePin : startPinSetup}
-                className="p-4 flex items-center justify-between border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
-                    <Lock size={20} />
+              <>
+                <div 
+                  onClick={hasPin ? handleRemovePin : startPinSetup}
+                  className="p-4 flex items-center justify-between border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
+                      <Lock size={20} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span>PIN de Acesso Rápido</span>
+                      <span className="text-[10px] text-zinc-500">{hasPin ? "PIN Ativo (Clique para remover)" : "Configurar PIN de 6 dígitos"}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span>PIN de Acesso Rápido</span>
-                    <span className="text-[10px] text-zinc-500">{hasPin ? "PIN Ativo (Clique para remover)" : "Configurar PIN de 6 dígitos"}</span>
+                  <div className={`w-10 h-5 rounded-full relative transition-colors ${hasPin ? 'bg-indigo-600' : 'bg-zinc-700'}`}>
+                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${hasPin ? 'left-6' : 'left-1'}`}></div>
                   </div>
                 </div>
-                <div className={`w-10 h-5 rounded-full relative transition-colors ${hasPin ? 'bg-indigo-600' : 'bg-zinc-700'}`}>
-                   <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${hasPin ? 'left-6' : 'left-1'}`}></div>
-                </div>
-              </div>
+
+                {hasPin && canUseBiometrics && (
+                  <div 
+                    onClick={toggleBiometrics}
+                    className="p-4 flex items-center justify-between border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+                        <Fingerprint size={20} />
+                      </div>
+                      <div className="flex flex-col">
+                        <span>Desbloqueio por Biometria</span>
+                        <span className="text-[10px] text-zinc-500">Usar digital ou Face ID</span>
+                      </div>
+                    </div>
+                    <div className={`w-10 h-5 rounded-full relative transition-colors ${hasBiometrics ? 'bg-emerald-600' : 'bg-zinc-700'}`}>
+                      <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${hasBiometrics ? 'left-6' : 'left-1'}`}></div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="p-4 flex items-center justify-between hover:bg-zinc-800/50 transition-colors">

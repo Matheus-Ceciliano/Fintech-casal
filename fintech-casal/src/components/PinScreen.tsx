@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Delete, Lock, UserKey, Loader2 } from "lucide-react";
+import { Delete, Lock, UserKey, Loader2, Fingerprint } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { hashPin } from "@/lib/pin";
 
@@ -17,6 +17,47 @@ export function PinScreen({ onSuccess, onFallback, storedHash, maxAttempts = 3 }
   const [attempts, setAttempts] = useState(0);
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isBiometricsAvailable, setIsBiometricsAvailable] = useState(false);
+
+  useEffect(() => {
+    checkBiometrics();
+  }, []);
+
+  const checkBiometrics = async () => {
+    if (window.PublicKeyCredential && 
+        PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      const preferred = localStorage.getItem("biometria_preferida") === "true";
+      setIsBiometricsAvailable(available && preferred);
+      
+      // Auto-trigger biometrics if preferred
+      if (available && preferred) {
+        handleNativeBiometrics();
+      }
+    }
+  };
+
+  const handleNativeBiometrics = async () => {
+    try {
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+
+      await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          userVerification: "required",
+          // @ts-ignore
+          authenticatorAttachment: "platform",
+          timeout: 60000,
+        },
+      });
+
+      onSuccess();
+    } catch (error) {
+      console.error("Biometria recusada ou falhou:", error);
+      // Silently fail and allow PIN input
+    }
+  };
 
   const handleNumberClick = (num: string) => {
     if (pin.length < 6) {
@@ -106,7 +147,16 @@ export function PinScreen({ onSuccess, onFallback, storedHash, maxAttempts = 3 }
             {num}
           </button>
         ))}
-        <div /> {/* Empty space */}
+        <div className="flex items-center justify-center">
+          {isBiometricsAvailable && (
+            <button
+              onClick={handleNativeBiometrics}
+              className="w-16 h-16 bg-indigo-600/10 text-indigo-400 rounded-full flex items-center justify-center transition-all active:scale-90"
+            >
+              <Fingerprint size={28} />
+            </button>
+          )}
+        </div>
         <button
           onClick={() => handleNumberClick("0")}
           className="h-20 bg-zinc-900/50 hover:bg-zinc-800 text-2xl font-semibold rounded-2xl border border-zinc-800/50 transition-all active:scale-90 flex items-center justify-center"
