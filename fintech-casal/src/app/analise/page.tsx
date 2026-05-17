@@ -286,7 +286,7 @@ export default async function AnalisePage({
               icon: <PiggyBank size={14} color={netBalance >= 0 ? "var(--savings-color)" : "var(--expense-color)"} />,
             },
             {
-              label: "Taxa de Poupança",
+              label: "Poupança%",
               val: `${savingsRate.toFixed(1)}%`,
               color:
                 savingsRate >= 20
