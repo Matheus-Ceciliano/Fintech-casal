@@ -46,7 +46,7 @@ export function DashboardClient(p: Props) {
   const h = hidden;
 
   return (
-    <div style={{ padding: "0 32px 48px" }}>
+    <div className="dashboard-container" style={{ padding: "0 32px 48px" }}>
       {/* ═══ SEÇÃO 1 — VISÃO RÁPIDA ═══ */}
       <div
         style={{
@@ -64,6 +64,7 @@ export function DashboardClient(p: Props) {
 
         {/* Unified Glassmorphism card */}
         <div
+          className="quick-glance-card"
           style={{
             background: "var(--dashboard-glass-bg)",
             backdropFilter: "blur(24px)",
@@ -74,10 +75,11 @@ export function DashboardClient(p: Props) {
             position: "relative",
             zIndex: 1,
             boxShadow: "0 8px 40px rgba(100, 80, 200, 0.12)",
+            overflow: "hidden",
           }}
         >
           {/* Card header: avatar + name + Ocultar button */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div className="quick-glance-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {p.avatarUrl ? (
                 <img
@@ -107,19 +109,20 @@ export function DashboardClient(p: Props) {
               </div>
             </div>
             <button
+              className="ocultar-btn"
               onClick={() => setHidden(!h)}
               style={{
                 background: "var(--dashboard-mini-bg)",
                 border: "var(--dashboard-mini-border)",
                 borderRadius: 20, cursor: "pointer",
                 color: "var(--dashboard-hero-muted)", padding: "5px 14px",
-                display: "flex", alignItems: "center", gap: 5,
+                display: "flex", alignItems: "center", gap: 6,
                 fontSize: 13, fontWeight: 600,
                 transition: "all 0.2s",
               }}
             >
-              {h ? <Eye size={13} /> : <EyeOff size={13} />}
-              {h ? "Mostrar" : "Ocultar"}
+              {h ? <Eye size={14} /> : <EyeOff size={14} />}
+              <span className="ocultar-text">{h ? "Mostrar" : "Ocultar"}</span>
             </button>
           </div>
 
@@ -132,10 +135,11 @@ export function DashboardClient(p: Props) {
 
           {/* Saldo */}
           <div style={{ fontSize: 12, color: "var(--dashboard-hero-muted)", marginBottom: 2, fontWeight: 500 }}>Saldo do Mês</div>
-          <div style={{
-            fontSize: 52, fontWeight: 800, letterSpacing: "-0.5px",
+          <div className="quick-glance-saldo" style={{
+            fontSize: "clamp(28px, 8vw, 52px)", fontWeight: 800, letterSpacing: "-0.5px",
             color: "#5B4FCF",
             transition: "opacity 0.3s",
+            wordBreak: "break-word",
           }}>
             {h ? "R$ ••••••" : fmt(p.netBalance)}
           </div>
@@ -150,22 +154,23 @@ export function DashboardClient(p: Props) {
           <div style={{ height: 1, borderTop: "1px solid var(--dashboard-divider-color)", marginBottom: 16 }} />
 
           {/* 3 mini-cards INSIDE the glass card */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <div className="quick-glance-minicards" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             {[
               { label: "Receitas", icon: "↑", val: p.totalIncome, color: "#059669" },
               { label: "Despesas", icon: "↓", val: p.totalExpenses, color: "#DC2626" },
               { label: "Cofrinho", icon: null, val: p.totalSaved, color: "#4F46E5", piggy: true },
             ].map(item => (
-              <div key={item.label} style={{
+              <div key={item.label} className="quick-glance-minicard" style={{
                 background: "var(--dashboard-mini-bg)",
                 border: "var(--dashboard-mini-border)",
                 borderRadius: 14, padding: "var(--dashboard-mini-padding)",
+                overflow: "hidden", minWidth: 0,
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
                   {item.piggy ? <PiggyBank size={13} color="#4F46E5" /> : <span style={{ fontSize: 13, fontWeight: 700, color: item.color }}>{item.icon}</span>}
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--dashboard-hero-text)" }}>{item.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--dashboard-hero-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: item.color, transition: "opacity 0.3s" }}>
+                <div className="quick-glance-minicard-val" style={{ fontSize: "clamp(16px, 4.5vw, 22px)", fontWeight: 700, color: item.color, transition: "opacity 0.3s", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {h ? "••••" : fmtCompact(item.val)}
                 </div>
               </div>

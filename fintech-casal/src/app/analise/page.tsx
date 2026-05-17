@@ -167,14 +167,7 @@ export default async function AnalisePage({
       <div style={{ padding: "24px 32px 48px" }}>
 
         {/* ── 4 KPI Cards ── */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 16,
-            marginBottom: 28,
-          }}
-        >
+        <div className="analise-kpis-grid">
           {[
             {
               label: "Receitas",
@@ -226,6 +219,7 @@ export default async function AnalisePage({
           ].map((k) => (
             <div
               key={k.label}
+              className="analise-kpi-card"
               style={{
                 background: "var(--bg-card)",
                 border: "1px solid var(--border-color)",
@@ -233,14 +227,16 @@ export default async function AnalisePage({
                 borderRadius: "var(--radius-card)",
                 padding: "18px 20px",
                 boxShadow: "var(--shadow-card)",
+                overflow: "hidden",
+                minWidth: 0,
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {k.label}
                   </p>
-                  <p style={{ fontSize: 20, fontWeight: 700, color: k.color, margin: 0 }}>
+                  <p style={{ fontSize: "clamp(16px, 4.5vw, 20px)", fontWeight: 700, color: k.color, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {k.val}
                   </p>
                 </div>

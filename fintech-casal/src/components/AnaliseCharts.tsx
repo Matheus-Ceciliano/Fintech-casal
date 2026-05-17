@@ -57,25 +57,27 @@ export function AnaliseCharts({ categoryData, personData, timelineData, totalExp
           </div>
         ) : (
           <>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={categoryData} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
-                  dataKey="value" paddingAngle={3}>
-                  {categoryData.map((_, i) => (
-                    <Cell key={i} fill={GRADIENT_COLORS[i % GRADIENT_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(val: any, name: any) => [
-                    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val),
-                    name,
-                  ]}
-                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 12 }}
-                  labelStyle={{ color: 'var(--text-primary)' }}
-                  itemStyle={{ color: 'var(--text-primary)' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div style={{ width: "100%", maxWidth: 280, margin: "0 auto", height: 200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={categoryData} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
+                    dataKey="value" paddingAngle={3}>
+                    {categoryData.map((_, i) => (
+                      <Cell key={i} fill={GRADIENT_COLORS[i % GRADIENT_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(val: any, name: any) => [
+                      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val),
+                      name,
+                    ]}
+                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 12 }}
+                    labelStyle={{ color: 'var(--text-primary)' }}
+                    itemStyle={{ color: 'var(--text-primary)' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
             {/* Legend */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
               {categoryData.map((item, i) => {

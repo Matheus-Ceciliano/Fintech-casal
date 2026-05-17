@@ -901,3 +901,67 @@ body.has-sidebar {
 @media (max-width: 767px) {
   .page-content { padding: 16px 16px 24px; }
 }
+
+/* ═══════════════════════════════════════
+   MOBILE RESPONSIVENESS & REFINEMENTS (PROMPTS 1 & 2)
+   ═══════════════════════════════════════ */
+
+.analise-kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 768px) {
+  /* Breakpoint mobile: max-width 768px */
+
+  /* Padding lateral em mobile: 16px (não mais que isso) */
+  .page-main,
+  .page-content,
+  .dashboard-container,
+  .transactions-container,
+  .analise-container,
+  .dividas-container,
+  .metas-container,
+  .profile-container,
+  div[style*="padding: 0 32px"],
+  div[style*="padding: 24px 32px"],
+  div[style*="padding: 20px 32px"] {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Ocultar button and text handling */
+  .quick-glance-header {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+  }
+  .ocultar-text {
+    display: none !important;
+  }
+  .ocultar-btn {
+    padding: 8px 12px !important;
+  }
+
+  /* Mini-cards (Receitas, Despesas, Cofrinho) nowrap or 2+1 grid */
+  .quick-glance-minicards {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .quick-glance-minicard:nth-child(3) {
+    grid-column: span 2 !important;
+  }
+
+  /* Todos os grids de 2 colunas do dashboard que não couberem: empilhar em 1 coluna */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Cards de Receitas e Despesas cortando à direita — usar grid: 1fr 1fr */
+  .analise-kpis-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+}

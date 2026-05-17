@@ -196,48 +196,70 @@ export function TransactionsClient({ transactions, myId, myName, partnerName }: 
           txs.map((tx, idx) => (
             <div
               key={tx.id}
-              className="tx-row"
-              style={{ background: idx % 2 === 0 ? "transparent" : "var(--border-subtle)" }}
+              className="tx-item-container"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                padding: "14px 0",
+                borderBottom: "1px solid var(--border-subtle)",
+                background: idx % 2 === 0 ? "transparent" : "var(--border-subtle)",
+              }}
             >
-              <div
-                className="cat-icon"
-                style={{
-                  background: tx.type === "income" ? "var(--income-bg)" : "var(--expense-bg)",
-                  borderRadius: 12,
-                }}
-              >
-                {CATEGORY_ICONS[tx.category] || "💸"}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              {/* Linha superior = ícone + descrição + valor */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
+                  <div
+                    className="cat-icon"
+                    style={{
+                      background: tx.type === "income" ? "var(--income-bg)" : "var(--expense-bg)",
+                      borderRadius: 12,
+                      width: 44,
+                      height: 44,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 20,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {CATEGORY_ICONS[tx.category] || "💸"}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: "var(--text-primary)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {tx.description}
+                  </div>
+                </div>
                 <div
                   style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: "var(--text-primary)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
+                    fontWeight: 700,
+                    fontSize: "clamp(14px, 4vw, 18px)",
+                    color: tx.type === "income" ? "var(--income-color)" : "var(--expense-color)",
+                    flexShrink: 0,
+                    wordBreak: "break-word",
                   }}
                 >
-                  {tx.description}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span className={`chip chip-${tx.type === "income" ? "green" : "red"}`}>
-                    {tx.category}
-                  </span>
-                  {tx.userId === myId ? myName : partnerName} · {formatDate(tx.date)}
+                  {tx.type === "income" ? "+" : "-"}
+                  {formatCurrency(Number(tx.amount))}
                 </div>
               </div>
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: 14,
-                  color: tx.type === "income" ? "var(--income-color)" : "var(--expense-color)",
-                  flexShrink: 0,
-                }}
-              >
-                {tx.type === "income" ? "+" : "-"}
-                {formatCurrency(Number(tx.amount))}
+
+              {/* Linha inferior = categoria badge + responsável + data */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 56, flexWrap: "wrap", fontSize: 12, color: "var(--text-muted)" }}>
+                <span className={`chip chip-${tx.type === "income" ? "green" : "red"}`}>
+                  {tx.category}
+                </span>
+                <span>{tx.userId === myId ? myName : partnerName}</span>
+                <span>•</span>
+                <span>{formatDate(tx.date)}</span>
               </div>
             </div>
           ))
