@@ -328,11 +328,20 @@ export async function updateGoal(formData: FormData) {
       deadline: data_limite || null,
     };
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from("goals")
       .update(payload)
       .eq("id", id)
       .eq("couple_id", profile.couple_id);
+
+    if (error && /emoji|deadline|column|schema cache/i.test(error.message)) {
+      const fallback = await supabase
+        .from("goals")
+        .update({ title: nome, target_amount: valor_alvo })
+        .eq("id", id)
+        .eq("couple_id", profile.couple_id);
+      error = fallback.error;
+    }
 
     if (error) throw error;
 
