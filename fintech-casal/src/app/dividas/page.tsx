@@ -1,7 +1,8 @@
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { CreditCard, AlertCircle, CheckCircle2, Plus } from "lucide-react";
+import { CreditCard, AlertCircle, CheckCircle2 } from "lucide-react";
+import { AddDebtModal } from "@/components/AddDebtModal";
 
 export const dynamic = "force-dynamic";
 
@@ -66,10 +67,7 @@ export default async function DividasPage() {
             Controle parcelas e compromissos financeiros
           </p>
         </div>
-        <button className="btn-primary">
-          <Plus size={16} />
-          Nova Dívida
-        </button>
+        <AddDebtModal />
       </div>
 
       <div style={{ padding: "24px 32px 48px" }}>
@@ -184,7 +182,7 @@ export default async function DividasPage() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-                      {d.title as string}
+                      {String(d.title || d.description || "Dívida")}
                     </div>
                     <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
                       Vence:{" "}
@@ -238,7 +236,7 @@ export default async function DividasPage() {
                       textDecoration: "line-through",
                     }}
                   >
-                    {d.title as string}
+                    {String(d.title || d.description || "Dívida")}
                   </div>
                 </div>
                 <div

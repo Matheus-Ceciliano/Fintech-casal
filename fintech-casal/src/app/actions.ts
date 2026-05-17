@@ -105,6 +105,66 @@ export async function seedDummyData() {
   revalidatePath("/");
 }
 
+export async function addDebt(formData: FormData) {
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+  if (sessionError || !session) {
+    throw new Error("Não autenticado");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("couple_id")
+    .eq("id", session.user.id)
+    .single();
+
+  if (!profile || !profile.couple_id) {
+    throw new Error("Grupo não encontrado");
+  }
+
+  const title = String(formData.get("title") || "").trim();
+  const amount = parseFloat(String(formData.get("amount") || ""));
+  const dueDate = String(formData.get("due_date") || "").trim();
+
+  if (!title) throw new Error("Descrição da dívida é obrigatória");
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Valor inválido");
+  if (!dueDate) throw new Error("Data de vencimento é obrigatória");
+
+  const fullPayload = {
+    couple_id: profile.couple_id,
+    user_id: session.user.id,
+    title,
+    amount,
+    due_date: dueDate,
+    status: "open",
+  };
+
+  let { error } = await supabase.from("debts").insert(fullPayload);
+
+  if (error && /title|status|column|schema cache/i.test(error.message)) {
+    const fallback = await supabase.from("debts").insert({
+      couple_id: profile.couple_id,
+      user_id: session.user.id,
+      description: title,
+      amount,
+      due_date: dueDate,
+    });
+    error = fallback.error;
+  }
+
+  if (error) {
+    console.error("Erro ao adicionar dívida:", error);
+    throw new Error("Erro ao adicionar dívida");
+  }
+
+  revalidatePath("/dividas");
+  revalidatePath("/");
+}
+
 export async function addGoal(formData: FormData) {
   const cookieStore = await cookies();
   // @ts-expect-error - auth-helpers expects a sync return

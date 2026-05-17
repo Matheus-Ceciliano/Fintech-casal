@@ -189,7 +189,7 @@ export default async function Home({
       const owner = getDebtOwner(d);
       return {
         id: d.id as string,
-        title: d.title as string,
+        title: String(d.title || d.description || "Dívida"),
         amount: Number(d.amount),
         dueDate: d.due_date as string,
         userName: owner.userName,
@@ -209,7 +209,7 @@ export default async function Home({
       const owner = getDebtOwner(d);
       return {
         id: d.id as string,
-        title: d.title as string,
+        title: String(d.title || d.description || "Dívida"),
         amount: Number(d.amount),
         paidAt: d.paid_at as string,
         userName: owner.userName,
