@@ -171,13 +171,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+}
+
+body.has-sidebar {
   /* Mobile: bottom nav padding */
   padding-bottom: var(--nav-height);
 }
 
 /* Desktop: sidebar takes over, no bottom nav */
 @media (min-width: 768px) {
-  body {
+  body.has-sidebar {
     padding-bottom: 0;
     padding-left: var(--sidebar-width);
   }

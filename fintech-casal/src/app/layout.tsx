@@ -59,7 +59,7 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body>
+      <body className={session ? "has-sidebar" : ""}>
         <AppLockProvider requireLock={hasBiometrics}>
           {/* Desktop sidebar — hidden on mobile via CSS */}
           {session && (

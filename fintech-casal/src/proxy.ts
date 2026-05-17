@@ -10,6 +10,10 @@ export async function proxy(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
+  // Ignora arquivos estáticos
+  const isStaticAsset = req.nextUrl.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|json|js)$/i);
+  if (isStaticAsset) return res;
+
   // Rotas públicas que não precisam de autenticação
   const isPublicRoute = 
     req.nextUrl.pathname.startsWith("/login") || 
@@ -39,11 +43,8 @@ export const config = {
      * Match all request paths except for the ones starting with:
      * - _next/static (static files)
      * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - manifest.json (PWA manifest)
-     * - icon-*.png (PWA icons)
-     * Feel free to modify this pattern to include more paths.
+     * - favicon.ico, manifest.json, logo.png, icon-*.png, etc.
      */
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|icon-.*\\.png).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|logo\\.png|icon\\.png|apple-icon\\.png|sw\\.js|workbox-.*|icon-.*\\.png|.*\\.svg).*)",
   ],
 };
