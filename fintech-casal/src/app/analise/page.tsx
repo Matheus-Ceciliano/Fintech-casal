@@ -194,26 +194,26 @@ export default async function AnalisePage({
               icon: <PiggyBank size={18} color={netBalance >= 0 ? "var(--savings-color)" : "var(--expense-color)"} />,
             },
             {
-              label: "Taxa de Poupança",
+              label: "Tx. Poupança",
               val: `${savingsRate.toFixed(1)}%`,
               color:
                 savingsRate >= 20
                   ? "var(--income-color)"
                   : savingsRate >= 0
-                  ? "#D97706"
-                  : "var(--expense-color)",
+                    ? "#D97706"
+                    : "var(--expense-color)",
               bg:
                 savingsRate >= 20
                   ? "var(--income-bg)"
                   : savingsRate >= 0
-                  ? "rgba(217,119,6,0.08)"
-                  : "var(--expense-bg)",
+                    ? "rgba(217,119,6,0.08)"
+                    : "var(--expense-bg)",
               border:
                 savingsRate >= 20
                   ? "var(--income-color)"
                   : savingsRate >= 0
-                  ? "#D97706"
-                  : "var(--expense-color)",
+                    ? "#D97706"
+                    : "var(--expense-color)",
               icon: <Percent size={18} color={savingsRate >= 20 ? "var(--income-color)" : savingsRate >= 0 ? "#D97706" : "var(--expense-color)"} />,
             },
           ].map((k) => (
@@ -292,20 +292,20 @@ export default async function AnalisePage({
                 savingsRate >= 20
                   ? "var(--income-color)"
                   : savingsRate >= 0
-                  ? "#D97706"
-                  : "var(--expense-color)",
+                    ? "#D97706"
+                    : "var(--expense-color)",
               bg:
                 savingsRate >= 20
                   ? "var(--income-bg)"
                   : savingsRate >= 0
-                  ? "rgba(217,119,6,0.08)"
-                  : "var(--expense-bg)",
+                    ? "rgba(217,119,6,0.08)"
+                    : "var(--expense-bg)",
               border:
                 savingsRate >= 20
                   ? "var(--income-color)"
                   : savingsRate >= 0
-                  ? "#D97706"
-                  : "var(--expense-color)",
+                    ? "#D97706"
+                    : "var(--expense-color)",
               icon: <Percent size={14} color={savingsRate >= 20 ? "var(--income-color)" : savingsRate >= 0 ? "#D97706" : "var(--expense-color)"} />,
             },
           ].map((k) => (
