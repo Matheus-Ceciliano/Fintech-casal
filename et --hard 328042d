@@ -1,0 +1,19 @@
+[33m9aed53b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix(auth): tratamento de erro 400 invalid refresh token e redirecionamento silencioso
+[33m328042d[m fix(ui): correcoes de responsividade mobile e novo menu expansivel
+[33mef8a463[m responsividadess
+[33mf909e91[m Logo
+[33mf48ae20[m erro
+[33md1e97f9[m redesign dashboard e melhorias no cofrinho
+[33mab9defd[m feat: implementa sistema hibrido PIN + Biometria nativa
+[33m273557d[m feat: implementa sistema de PIN e novo logo digital
+[33mfeda7e3[m feat: forca uso de autenticador local (platform) no WebAuthn
+[33m75294ad[m feat: configura PWA completo para deployment na Vercel
+[33md3fc21c[m feat: implementa fluxo completo de biometria WebAuthn restrito ao PWA
+[33mf46719e[m Fix: use upsert for profile linkage in setup to handle missing profiles
+[33mb08a9c6[m Fix: runtime 500 error due to async cookies() in Next 15+ conflicting with auth-helpers
+[33m2b0991e[m Fix: type errors with Next.js 16 cookies() returning a Promise and Recharts formatter typing
+[33ma597ec0[m Fix: export function as proxy to resolve Next.js 16 proxy convention error
+[33m390ac58[m Fix: build error with next-pwa and Turbopack by forcing Webpack, renamed middleware to proxy
+[33m5ede062[m Fix: convert submodule to regular directory to resolve build errors
+[33m5867075[m Corrigindo repositório embutido e organizando arquivos
+[33me6080cc[m first commit
