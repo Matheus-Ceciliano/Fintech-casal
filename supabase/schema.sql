@@ -52,6 +52,9 @@ CREATE TABLE goals (
   title TEXT NOT NULL,
   target_amount NUMERIC(10, 2) NOT NULL,
   current_amount NUMERIC(10, 2) DEFAULT 0 NOT NULL,
+  emoji TEXT DEFAULT '🐷',
+  deadline DATE,
+  completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 

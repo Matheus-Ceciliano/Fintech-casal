@@ -1,38 +1,34 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
+import { Sidebar } from "@/components/Sidebar";
 import { AppLockProvider } from "@/components/AppLockProvider";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Fintech Casal",
-  description: "Dashboard de Finanças Compartilhadas",
+  title: "CasalFinance — Finanças a Dois",
+  description: "Gerencie as finanças do casal de forma simples, bonita e inteligente.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "FinCasal",
+    statusBarStyle: "black-translucent",
+    title: "CasalFinance",
+  },
+  openGraph: {
+    title: "CasalFinance",
+    description: "Finanças compartilhadas para casais",
+    type: "website",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#F8F7FF",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({
@@ -44,27 +40,39 @@ export default async function RootLayout({
   // @ts-expect-error - auth-helpers expects a sync return but next 15+ types it as async
   const supabase = createServerComponentClient({ cookies: () => cookieStore });
   const { data: { session } } = await supabase.auth.getSession();
-  
+
   let hasBiometrics = false;
+  let theme = "light";
   if (session) {
     const { data } = await supabase
       .from("profiles")
-      .select("has_biometrics")
+      .select("has_biometrics, theme_preference")
       .eq("id", session.user.id)
       .single();
     hasBiometrics = data?.has_biometrics || false;
+    theme = data?.theme_preference || "light";
   }
 
   return (
-    <html
-      lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 pb-16">
+    <html lang="pt-BR" data-theme={theme} className={theme}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body>
         <AppLockProvider requireLock={hasBiometrics}>
-          <main className="flex-grow w-full relative">
+          {/* Desktop sidebar — hidden on mobile via CSS */}
+          {session && (
+            <div className="sidebar-wrapper">
+              <Sidebar />
+            </div>
+          )}
+
+          <main style={{ minHeight: "100dvh" }}>
             {children}
           </main>
+
+          {/* Mobile bottom nav — hidden on desktop via CSS */}
           {session && <BottomNav />}
         </AppLockProvider>
       </body>

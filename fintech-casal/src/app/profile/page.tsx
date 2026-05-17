@@ -3,20 +3,22 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, LogOut, Shield, Bell, Moon, ChevronRight, Lock, Delete, Fingerprint } from "lucide-react";
+import { User, LogOut, Shield, Bell, Moon, Sun, ChevronRight, Lock, Delete, Fingerprint, Users } from "lucide-react";
 import { isPWA } from "@/lib/pwa";
 import { hashPin, getStoredPinHash, setStoredPinHash, clearPin } from "@/lib/pin";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPwaActive, setIsPwaActive] = useState(false);
   const [hasPin, setHasPin] = useState(false);
   const [hasBiometrics, setHasBiometrics] = useState(false);
   const [canUseBiometrics, setCanUseBiometrics] = useState(false);
-  
-  // PIN Setup State
+  const [isDark, setIsDark] = useState(true);
+  const [coupleInfo, setCoupleInfo] = useState<{ invite_code?: string; member_count?: number } | null>(null);
+
+  // PIN Setup
   const [showPinSetup, setShowPinSetup] = useState(false);
   const [setupStep, setSetupStep] = useState<"create" | "confirm">("create");
   const [tempPin, setTempPin] = useState("");
@@ -30,13 +32,25 @@ export default function ProfilePage() {
     setIsPwaActive(isPWA());
     setHasPin(!!getStoredPinHash());
     setHasBiometrics(localStorage.getItem("biometria_preferida") === "true");
+    setIsDark(document.documentElement.dataset.theme !== "light");
     checkBiometricSupport();
     getProfile();
   }, []);
 
+  const toggleTheme = async () => {
+    const newTheme = isDark ? "light" : "dark";
+    document.documentElement.dataset.theme = newTheme;
+    document.documentElement.className = newTheme;
+    setIsDark(!isDark);
+    // Persist to Supabase if possible
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await supabase.from("profiles").update({ theme_preference: newTheme }).eq("id", session.user.id);
+    }
+  };
+
   const checkBiometricSupport = async () => {
-    if (window.PublicKeyCredential && 
-        PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+    if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
       const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       setCanUseBiometrics(available);
     }
@@ -45,302 +59,233 @@ export default function ProfilePage() {
   async function getProfile() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/login");
-        return;
-      }
+      if (!session) { router.push("/login"); return; }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .single();
-
-      if (error) throw error;
+      const { data } = await supabase.from("profiles").select("*, couples(invite_code)").eq("id", session.user.id).single();
       setProfile(data);
-    } catch (error) {
-      console.error("Erro ao carregar perfil:", error);
+
+      if (data?.couple_id) {
+        const { data: members } = await supabase.from("profiles").select("id").eq("couple_id", data.couple_id);
+        setCoupleInfo({ invite_code: (data.couples as { invite_code?: string })?.invite_code, member_count: members?.length });
+      }
+    } catch (e) {
+      console.error("Erro ao carregar perfil:", e);
     } finally {
       setLoading(false);
     }
   }
 
   const handleSignOut = async () => {
+    if (!confirm("Tem certeza que deseja sair?")) return;
     await supabase.auth.signOut();
     router.push("/login");
-    router.refresh();
   };
 
-  const startPinSetup = () => {
-    setSetupStep("create");
-    setSetupPin("");
-    setTempPin("");
-    setShowPinSetup(true);
-    setSetupError(false);
-  };
+  const startPinSetup = () => { setSetupStep("create"); setSetupPin(""); setTempPin(""); setShowPinSetup(true); setSetupError(false); };
 
   const handlePinDigit = (digit: string) => {
     setSetupError(false);
-    const currentPin = setupPin + digit;
-    if (currentPin.length <= 6) {
-      setSetupPin(currentPin);
-      if (currentPin.length === 6) {
-        if (setupStep === "create") {
-          setTempPin(currentPin);
-          setSetupPin("");
-          setSetupStep("confirm");
-        } else {
-          if (currentPin === tempPin) {
-            completePinSetup(currentPin);
-          } else {
-            setSetupError(true);
-            setSetupPin("");
-          }
-        }
+    const cur = setupPin + digit;
+    if (cur.length <= 6) {
+      setSetupPin(cur);
+      if (cur.length === 6) {
+        if (setupStep === "create") { setTempPin(cur); setSetupPin(""); setSetupStep("confirm"); }
+        else { cur === tempPin ? completePinSetup(cur) : (setSetupError(true), setSetupPin("")); }
       }
     }
   };
 
   const completePinSetup = async (pin: string) => {
-    const hash = await hashPin(pin);
-    setStoredPinHash(hash);
-    setHasPin(true);
-    setShowPinSetup(false);
-    alert("PIN configurado com sucesso!");
-  };
-
-  const handleRemovePin = () => {
-    if (confirm("Deseja realmente remover o PIN de acesso rápido?")) {
-      clearPin();
-      setHasPin(false);
-      setHasBiometrics(false);
-      localStorage.removeItem("biometria_preferida");
-    }
+    setStoredPinHash(await hashPin(pin));
+    setHasPin(true); setShowPinSetup(false);
   };
 
   const toggleBiometrics = async () => {
     if (!hasBiometrics) {
-      // Ativar
       try {
         const challenge = new Uint8Array(32);
         window.crypto.getRandomValues(challenge);
-        
-        // Solicita biometria uma vez para confirmar
-        await navigator.credentials.get({
-          publicKey: {
-            challenge,
-            userVerification: "required",
-            // @ts-ignore
-            authenticatorAttachment: "platform",
-            timeout: 60000,
-          }
-        });
-
+        await navigator.credentials.get({ publicKey: { challenge, userVerification: "required", timeout: 60000 } as PublicKeyCredentialRequestOptions });
         localStorage.setItem("biometria_preferida", "true");
         setHasBiometrics(true);
-        alert("Biometria ativada com sucesso!");
-      } catch (e) {
-        console.error("Falha ao ativar biometria:", e);
-      }
-    } else {
-      // Desativar
-      localStorage.removeItem("biometria_preferida");
-      setHasBiometrics(false);
-    }
+      } catch { /* ignored */ }
+    } else { localStorage.removeItem("biometria_preferida"); setHasBiometrics(false); }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+  if (loading) return (
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
+      <div style={{ width: 36, height: 36, border: '3px solid var(--border-color)', borderTopColor: '#C850C0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  );
+
+  const settingRow = (icon: React.ReactNode, iconBg: string, label: string, sub?: string, right?: React.ReactNode, onClick?: () => void) => (
+    <div onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+      cursor: onClick ? 'pointer' : 'default',
+      borderBottom: '1px solid var(--border-subtle)',
+      transition: 'background 0.15s',
+    }}>
+      <div style={{ width: 38, height: 38, borderRadius: 12, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        {icon}
       </div>
-    );
-  }
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{label}</div>
+        {sub && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div>}
+      </div>
+      {right || (onClick && <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />)}
+    </div>
+  );
+
+  const Toggle = ({ active }: { active: boolean }) => (
+    <div className={`toggle-track${active ? ' active' : ''}`}>
+      <div className="toggle-thumb" />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white pb-24">
-      {/* Header */}
-      <div className="p-6 pt-12 flex flex-col items-center space-y-4">
-        <div className="w-24 h-24 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-600/20 border-4 border-zinc-900">
-          <User size={48} className="text-white" />
+    <div style={{ background: 'var(--bg-primary)', minHeight: '100dvh', paddingBottom: 32 }} className="page-animate">
+      {/* Hero */}
+      <div style={{
+        background: 'linear-gradient(160deg, #1e0a3c 0%, #2d0f5c 60%, #1a0533 100%)',
+        padding: '32px 20px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+      }}>
+        <div style={{
+          width: 88, height: 88, borderRadius: '50%',
+          background: 'linear-gradient(135deg, #FF6B6B, #C850C0)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: '3px solid rgba(255,255,255,0.15)',
+          boxShadow: '0 8px 32px rgba(200,80,192,0.35)',
+        }}>
+          <User size={40} color="white" />
         </div>
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">{profile?.full_name || "Usuário"}</h1>
-          <p className="text-zinc-500 text-sm">Membro desde {new Date(profile?.created_at).toLocaleDateString("pt-BR")}</p>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'white', margin: 0 }}>{String(profile?.full_name || "Usuário")}</h1>
+          {profile?.created_at && (
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', margin: '4px 0 0' }}>
+              Desde {new Date(profile.created_at as string).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+            </p>
+          )}
         </div>
+        {coupleInfo && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 100, padding: '6px 14px', border: '1px solid rgba(255,255,255,0.12)' }}>
+            <Users size={14} color="rgba(255,255,255,0.6)" />
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+              {coupleInfo.member_count === 2 ? '💑 Casal conectado' : '👤 Aguardando parceiro(a)'}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Content */}
-      <div className="px-6 space-y-8">
-        {/* Account Section */}
-        <section className="space-y-4">
-          <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-2">Conta e Segurança</h2>
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden">
-            <div className="p-4 flex items-center justify-between border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
-                  <Shield size={20} />
-                </div>
-                <span>Privacidade</span>
-              </div>
-              <ChevronRight size={18} className="text-zinc-600" />
-            </div>
-
-            {isPwaActive && (
-              <>
-                <div 
-                  onClick={hasPin ? handleRemovePin : startPinSetup}
-                  className="p-4 flex items-center justify-between border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
-                      <Lock size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                      <span>PIN de Acesso Rápido</span>
-                      <span className="text-[10px] text-zinc-500">{hasPin ? "PIN Ativo (Clique para remover)" : "Configurar PIN de 6 dígitos"}</span>
-                    </div>
-                  </div>
-                  <div className={`w-10 h-5 rounded-full relative transition-colors ${hasPin ? 'bg-indigo-600' : 'bg-zinc-700'}`}>
-                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${hasPin ? 'left-6' : 'left-1'}`}></div>
-                  </div>
-                </div>
-
-                {hasPin && canUseBiometrics && (
-                  <div 
-                    onClick={toggleBiometrics}
-                    className="p-4 flex items-center justify-between border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
-                        <Fingerprint size={20} />
-                      </div>
-                      <div className="flex flex-col">
-                        <span>Desbloqueio por Biometria</span>
-                        <span className="text-[10px] text-zinc-500">Usar digital ou Face ID</span>
-                      </div>
-                    </div>
-                    <div className={`w-10 h-5 rounded-full relative transition-colors ${hasBiometrics ? 'bg-emerald-600' : 'bg-zinc-700'}`}>
-                      <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${hasBiometrics ? 'left-6' : 'left-1'}`}></div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="p-4 flex items-center justify-between hover:bg-zinc-800/50 transition-colors">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-yellow-500/10 text-yellow-400 rounded-lg">
-                  <Bell size={20} />
-                </div>
-                <span>Notificações</span>
-              </div>
-              <ChevronRight size={18} className="text-zinc-600" />
-            </div>
-          </div>
-        </section>
-
+      <div style={{ maxWidth: 430, margin: '0 auto', padding: '0 16px 24px' }}>
         {/* Preferences */}
-        <section className="space-y-4">
-          <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-2">Preferências</h2>
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden">
-            <div className="p-4 flex items-center justify-between hover:bg-zinc-800/50 transition-colors">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-zinc-800 text-zinc-400 rounded-lg">
-                  <Moon size={20} />
-                </div>
-                <span>Modo Escuro</span>
-              </div>
-              <div className="w-10 h-5 bg-indigo-600 rounded-full relative">
-                <div className="absolute top-1 left-6 w-3 h-3 bg-white rounded-full"></div>
-              </div>
-            </div>
+        <div style={{ marginTop: 20 }}>
+          <div className="section-title">Preferências</div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            {settingRow(
+              <Bell size={18} color="#fbbf24" />, 'rgba(251,191,36,0.12)', 'Notificações', 'Alertas de novas transações',
+              <Toggle active={true} />
+            )}
+            {settingRow(
+              isDark ? <Moon size={18} color="#a78bfa" /> : <Sun size={18} color="#fbbf24" />,
+              isDark ? 'rgba(167,139,250,0.12)' : 'rgba(251,191,36,0.12)',
+              isDark ? 'Modo Escuro' : 'Modo Claro', 'Tema da interface',
+              <Toggle active={isDark} />, toggleTheme
+            )}
           </div>
-        </section>
+        </div>
+
+        {/* Security */}
+        <div style={{ marginTop: 20 }}>
+          <div className="section-title">Conta e Segurança</div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            {settingRow(<Shield size={18} color="#38bdf8" />, 'rgba(56,189,248,0.12)', 'Privacidade', 'Configurações de dados')}
+            {isPwaActive && settingRow(
+              <Lock size={18} color="#a78bfa" />, 'rgba(167,139,250,0.12)',
+              'PIN de Acesso', hasPin ? 'PIN ativo — clique para remover' : 'Configurar PIN de 6 dígitos',
+              <Toggle active={hasPin} />,
+              hasPin ? () => { if (confirm("Remover PIN?")) { clearPin(); setHasPin(false); setHasBiometrics(false); localStorage.removeItem("biometria_preferida"); } } : startPinSetup
+            )}
+            {isPwaActive && hasPin && canUseBiometrics && settingRow(
+              <Fingerprint size={18} color="#34d399" />, 'rgba(52,211,153,0.12)',
+              'Biometria', 'Digital ou Face ID',
+              <Toggle active={hasBiometrics} />, toggleBiometrics
+            )}
+          </div>
+        </div>
 
         {/* Logout */}
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center justify-center space-x-2 p-4 bg-rose-500/10 text-rose-500 rounded-2xl border border-rose-500/20 font-medium hover:bg-rose-500/20 transition-all active:scale-[0.98]"
-        >
-          <LogOut size={20} />
-          <span>Sair da Conta</span>
-        </button>
+        <div style={{ marginTop: 24 }}>
+          <button
+            onClick={handleSignOut}
+            style={{
+              width: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 10, background: 'rgba(251,113,133,0.08)', border: '1.5px solid rgba(251,113,133,0.2)',
+              borderRadius: 16, color: '#fb7185', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              transition: 'background 0.2s',
+            }}
+          >
+            <LogOut size={18} />
+            Sair da Conta
+          </button>
+        </div>
 
-        <div className="text-center text-[10px] text-zinc-600 uppercase tracking-[0.2em] pt-4">
-          FinCasal v1.0.0
+        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 20, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          CasalFinance v2.0
         </div>
       </div>
 
       {/* PIN Setup Overlay */}
       <AnimatePresence>
         {showPinSetup && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
-            className="fixed inset-0 z-[300] bg-zinc-950 flex flex-col items-center p-8"
+            style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 32 }}
           >
-            <div className="w-full max-w-md flex flex-col items-center h-full">
-              <div className="flex justify-between w-full mb-12">
-                <button onClick={() => setShowPinSetup(false)} className="text-zinc-400 hover:text-white">Cancelar</button>
-                <div className="text-indigo-400 font-bold uppercase tracking-tighter">Novo PIN</div>
-                <div className="w-12"></div>
+            <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: 40 }}>
+                <button onClick={() => setShowPinSetup(false)} style={{ background: 'none', border: 'none', fontSize: 14, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancelar</button>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#C850C0' }}>NOVO PIN</span>
+                <div style={{ width: 56 }} />
               </div>
 
-              <div className="flex flex-col items-center space-y-4 mb-12">
-                <div className="w-16 h-16 bg-indigo-600/20 text-indigo-400 rounded-2xl flex items-center justify-center">
-                  <Lock size={32} />
+              <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                <div style={{ width: 64, height: 64, borderRadius: 20, background: 'rgba(200,80,192,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <Lock size={32} color="#C850C0" />
                 </div>
-                <h2 className="text-xl font-bold">
-                  {setupStep === "create" ? "Crie seu PIN de 6 dígitos" : "Confirme seu PIN"}
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px' }}>
+                  {setupStep === "create" ? "Crie seu PIN" : "Confirme o PIN"}
                 </h2>
-                <p className="text-zinc-500 text-center text-sm">
-                  {setupStep === "create" 
-                    ? "Escolha uma combinação numérica para acessar o app rapidamente." 
-                    : "Digite novamente para confirmar o PIN."}
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+                  {setupStep === "create" ? "6 dígitos numéricos" : "Digite novamente para confirmar"}
                 </p>
               </div>
 
-              {/* Indicators */}
-              <div className="flex space-x-4 mb-12">
+              <div style={{ display: 'flex', gap: 12, marginBottom: 32 }}>
                 {[...Array(6)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-4 h-4 rounded-full border border-zinc-800 transition-colors ${
-                      setupPin.length > i ? "bg-indigo-600 border-indigo-600" : "bg-transparent"
-                    } ${setupError ? "bg-rose-500 border-rose-500" : ""}`}
-                  />
+                  <div key={i} style={{
+                    width: 14, height: 14, borderRadius: '50%',
+                    background: setupError ? '#fb7185' : setupPin.length > i ? '#C850C0' : 'var(--border-color)',
+                    border: `2px solid ${setupError ? '#fb7185' : setupPin.length > i ? '#C850C0' : 'var(--border-color)'}`,
+                    transition: 'all 0.2s',
+                  }} />
                 ))}
               </div>
+              {setupError && <p style={{ color: '#fb7185', fontSize: 13, marginBottom: 16 }}>PINs não coincidem. Tente novamente.</p>}
 
-              {setupError && (
-                <p className="text-rose-500 text-sm mb-6 animate-pulse">Os PINs não coincidem. Tente novamente.</p>
-              )}
-
-              {/* Pad */}
-              <div className="w-full grid grid-cols-3 gap-4 mt-auto max-w-xs mb-8">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                  <button
-                    key={num}
-                    onClick={() => handlePinDigit(num.toString())}
-                    className="h-16 bg-zinc-900 border border-zinc-800 text-xl font-bold rounded-2xl active:bg-indigo-600 transition-colors"
-                  >
-                    {num}
-                  </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, width: '100%', marginTop: 'auto' }}>
+                {[1,2,3,4,5,6,7,8,9].map(n => (
+                  <button key={n} onClick={() => handlePinDigit(String(n))} style={{
+                    height: 64, background: 'var(--bg-card)', border: '1.5px solid var(--border-color)',
+                    borderRadius: 16, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}>{n}</button>
                 ))}
                 <div />
-                <button
-                  onClick={() => handlePinDigit("0")}
-                  className="h-16 bg-zinc-900 border border-zinc-800 text-xl font-bold rounded-2xl active:bg-indigo-600 transition-colors"
-                >
-                  0
-                </button>
-                <button
-                  onClick={() => setSetupPin(prev => prev.slice(0, -1))}
-                  className="h-16 flex items-center justify-center text-zinc-500 active:text-white"
-                >
-                  <Delete size={24} />
+                <button onClick={() => handlePinDigit("0")} style={{ height: 64, background: 'var(--bg-card)', border: '1.5px solid var(--border-color)', borderRadius: 16, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer' }}>0</button>
+                <button onClick={() => setSetupPin(p => p.slice(0, -1))} style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                  <Delete size={22} />
                 </button>
               </div>
             </div>

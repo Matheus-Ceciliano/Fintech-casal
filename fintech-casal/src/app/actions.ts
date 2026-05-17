@@ -126,19 +126,40 @@ export async function addGoal(formData: FormData) {
     throw new Error("Grupo não encontrado");
   }
 
-  const title = formData.get("title") as string;
-  const target_amount = parseFloat(formData.get("target_amount") as string);
-  const emoji = formData.get("emoji") as string;
-  const deadline = formData.get("deadline") as string;
+  const title = String(formData.get("title") || "").trim();
+  const target_amount = parseFloat(String(formData.get("target_amount") || ""));
+  const emoji = String(formData.get("emoji") || "").trim() || "🐷";
+  const deadline = String(formData.get("deadline") || "").trim();
 
-  const { error } = await supabase.from("goals").insert({
+  if (!title) {
+    throw new Error("Nome do cofrinho é obrigatório");
+  }
+
+  if (!Number.isFinite(target_amount) || target_amount <= 0) {
+    throw new Error("Valor alvo inválido");
+  }
+
+  const basePayload = {
     couple_id: profile.couple_id,
     title,
     target_amount,
-    emoji: emoji || '🎯',
-    deadline: deadline || null,
     current_amount: 0,
-  });
+  };
+
+  const fullPayload = {
+    ...basePayload,
+    emoji,
+    deadline: deadline || null,
+  };
+
+  console.log("addGoal payload:", fullPayload);
+
+  let { error } = await supabase.from("goals").insert(fullPayload);
+
+  if (error && /emoji|deadline|column|schema cache/i.test(error.message)) {
+    const fallback = await supabase.from("goals").insert(basePayload);
+    error = fallback.error;
+  }
 
   if (error) {
     console.error("Erro ao adicionar meta:", error);
@@ -172,11 +193,13 @@ export async function depositToGoal(formData: FormData) {
 
   const goalId = formData.get("goal_id") as string;
   const amount = parseFloat(formData.get("amount") as string);
+  const description = String(formData.get("description") || "").trim();
   const deductFromBalance = formData.get("deduct_from_balance") === "true";
 
   // Primeiro busca o current_amount da meta
-  const { data: goal } = await supabase.from("goals").select("current_amount, title").eq("id", goalId).single();
+  const { data: goal } = await supabase.from("goals").select("*").eq("id", goalId).single();
   if (!goal) throw new Error("Meta não encontrada");
+  if ((goal as Record<string, unknown>).completed_at) throw new Error("Cofrinho concluído não aceita depósitos");
 
   const newAmount = Number(goal.current_amount) + amount;
 
@@ -196,7 +219,7 @@ export async function depositToGoal(formData: FormData) {
       amount: amount,
       type: "expense",
       category: "Investimento",
-      description: `Depósito: ${goal.title}`,
+      description: description || `Depósito: ${goal.title}`,
       date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
       is_shared: true,
     });
@@ -229,6 +252,7 @@ export async function withdrawFromGoal(formData: FormData) {
 
   const goalId = formData.get("goal_id") as string;
   const amount = parseFloat(formData.get("amount") as string);
+  const description = String(formData.get("description") || "").trim();
   const addToBalance = formData.get("add_to_balance") === "true";
 
   if (amount <= 0) throw new Error("Valor inválido");
@@ -259,12 +283,129 @@ export async function withdrawFromGoal(formData: FormData) {
       amount: amount,
       type: "income",
       category: "Outros",
-      description: `Resgate: ${goal.title}`,
+      description: description || `Resgate: ${goal.title}`,
       date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
       is_shared: true,
     });
   }
 
+  revalidatePath("/metas");
+  revalidatePath("/");
+}
+
+export async function updateGoal(formData: FormData) {
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session) throw new Error("Não autenticado");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("couple_id")
+    .eq("id", session.user.id)
+    .single();
+  if (!profile?.couple_id) throw new Error("Grupo não encontrado");
+
+  const goalId = String(formData.get("goal_id") || "");
+  const title = String(formData.get("title") || "").trim();
+  const target_amount = parseFloat(String(formData.get("target_amount") || ""));
+  const emoji = String(formData.get("emoji") || "").trim() || "🐷";
+  const deadline = String(formData.get("deadline") || "").trim();
+
+  if (!goalId) throw new Error("Cofrinho não encontrado");
+  if (!title) throw new Error("Nome do cofrinho é obrigatório");
+  if (!Number.isFinite(target_amount) || target_amount <= 0) throw new Error("Valor alvo inválido");
+
+  const { error } = await supabase
+    .from("goals")
+    .update({ title, target_amount, emoji, deadline: deadline || null })
+    .eq("id", goalId)
+    .eq("couple_id", profile.couple_id);
+
+  if (error) throw new Error("Erro ao atualizar cofrinho");
+  revalidatePath("/metas");
+  revalidatePath("/");
+}
+
+export async function completeGoal(formData: FormData) {
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session) throw new Error("Não autenticado");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("couple_id")
+    .eq("id", session.user.id)
+    .single();
+  if (!profile?.couple_id) throw new Error("Grupo não encontrado");
+
+  const goalId = String(formData.get("goal_id") || "");
+  if (!goalId) throw new Error("Cofrinho não encontrado");
+
+  const { error } = await supabase
+    .from("goals")
+    .update({ completed_at: new Date().toISOString() })
+    .eq("id", goalId)
+    .eq("couple_id", profile.couple_id);
+
+  if (error) throw new Error("Erro ao concluir cofrinho");
+  revalidatePath("/metas");
+  revalidatePath("/");
+}
+
+export async function deleteGoal(formData: FormData) {
+  const cookieStore = await cookies();
+  // @ts-expect-error - auth-helpers expects a sync return
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session) throw new Error("Não autenticado");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("couple_id")
+    .eq("id", session.user.id)
+    .single();
+  if (!profile?.couple_id) throw new Error("Grupo não encontrado");
+
+  const goalId = String(formData.get("goal_id") || "");
+  const returnBalance = formData.get("return_balance") === "true";
+  if (!goalId) throw new Error("Cofrinho não encontrado");
+
+  const { data: goal } = await supabase
+    .from("goals")
+    .select("title, current_amount")
+    .eq("id", goalId)
+    .eq("couple_id", profile.couple_id)
+    .single();
+  if (!goal) throw new Error("Cofrinho não encontrado");
+
+  const balance = Number(goal.current_amount);
+  if (returnBalance && balance > 0) {
+    await supabase.from("transactions").insert({
+      couple_id: profile.couple_id,
+      user_id: session.user.id,
+      amount: balance,
+      type: "income",
+      category: "Outros",
+      description: `Saldo devolvido: ${goal.title}`,
+      date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split("T")[0],
+      is_shared: true,
+    });
+  }
+
+  const { error } = await supabase
+    .from("goals")
+    .delete()
+    .eq("id", goalId)
+    .eq("couple_id", profile.couple_id);
+
+  if (error) throw new Error("Erro ao excluir cofrinho");
   revalidatePath("/metas");
   revalidatePath("/");
 }

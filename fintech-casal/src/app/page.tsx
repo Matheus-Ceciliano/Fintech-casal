@@ -1,342 +1,314 @@
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { LogOut, ArrowDownToLine, ArrowUpToLine, Calendar, Receipt, TrendingDown, Wallet } from "lucide-react";
-import { BiometricOptIn } from "@/components/BiometricOptIn";
-import { AreaChartCard, ExpensePieChartCard, IncomePieChartCard } from "@/components/Charts";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { DashboardClient } from "@/components/DashboardClient";
 import { AddTransactionModal } from "@/components/AddTransactionModal";
-import { InvitePartnerCard } from "@/components/InvitePartnerCard";
-import { seedDummyData } from "@/app/actions";
-import { isPWA } from "@/lib/pwa";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// Função auxiliar para mapear categorias para emojis
-function getCategoryIcon(category: string) {
-  const icons: Record<string, string> = {
-    'Alimentação': '🍔',
-    'Mercado': '🛒',
-    'Moradia': '🏠',
-    'Transporte': '⛽',
-    'Saúde': '💊',
-    'Lazer': '🍿',
-    'Viagem': '✈️',
-    'Salário': '💰',
-    'Investimento': '📈',
-    'Reserva': '🐷',
-    'Dívida': '📉',
-    'Empréstimo': '🏦',
-    'Outros': '📦'
-  };
-  return icons[category] || '💸';
+const CATEGORY_ICONS: Record<string, string> = {
+  Alimentação: "🍔", Mercado: "🛒", Moradia: "🏠", Transporte: "⛽",
+  Saúde: "💊", Lazer: "🍿", Viagem: "✈️", Salário: "💰",
+  Investimento: "📈", Reserva: "🐷", Dívida: "📉",
+  Empréstimo: "🏦", Outros: "📦",
+};
+
+function getMonthLabel(year: number, month: number) {
+  const d = new Date(year, month, 1);
+  return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(d);
 }
 
-function formatRelativeDate(dateStr: string) {
-  const date = new Date(dateStr + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diffTime = today.getTime() - date.getTime();
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 0) return "Hoje";
-  if (diffDays === 1) return "Ontem";
-  
-  return new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short' }).format(date);
+function inferGoalEmoji(title: string) {
+  const normalized = title.toLowerCase();
+  if (/(casamento|noivado)/.test(normalized)) return "💍";
+  if (/(viagem|férias|ferias)/.test(normalized)) return "✈️";
+  if (/(carro|moto)/.test(normalized)) return "🚗";
+  if (/(casa|apartamento)/.test(normalized)) return "🏠";
+  if (/(educação|educacao|curso)/.test(normalized)) return "📚";
+  if (/(emergência|emergencia|reserva)/.test(normalized)) return "🛡️";
+  if (/saúde|saude/.test(normalized)) return "💊";
+  if (/(tecnologia|celular)/.test(normalized)) return "💻";
+  if (/(bebê|bebe|filho)/.test(normalized)) return "👶";
+  if (/(pet|animal)/.test(normalized)) return "🐾";
+  if (/festa/.test(normalized)) return "🎉";
+  if (/presente/.test(normalized)) return "🎁";
+  if (/reforma/.test(normalized)) return "🔨";
+  if (/(negócio|negocio|investimento)/.test(normalized)) return "💼";
+  return "🐷";
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
   const cookieStore = await cookies();
   // @ts-expect-error - auth-helpers expects a sync return
   const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
+  const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect("/login");
 
-  const { data: profile, error } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("couple_id, full_name, has_biometrics")
+    .select("couple_id, full_name, avatar_url")
     .eq("id", session.user.id)
     .single();
+  if (!profile?.couple_id) redirect("/setup");
 
-  if (error || !profile?.couple_id) redirect("/setup");
-
-  // Buscar detalhes do grupo e membros
-  const { data: couple } = await supabase.from("couples").select("invite_code").eq("id", profile.couple_id).single();
-  const { data: profiles } = await supabase.from("profiles").select("id, full_name").eq("couple_id", profile.couple_id);
-  
-  const partnerProfile = profiles?.find(p => p.id !== session.user.id);
-  const partnerName = partnerProfile ? partnerProfile.full_name?.split(" ")[0] : "Parceiro(a)";
-
+  const params = await searchParams;
   const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  const year = parseInt(params.y || String(now.getFullYear()));
+  const month = parseInt(params.m || String(now.getMonth()));
 
-  const { data: transactions } = await supabase
-    .from("transactions")
-    .select("*")
-    .eq("couple_id", profile.couple_id)
-    .gte("date", firstDay)
-    .lte("date", lastDay)
-    .order('date', { ascending: false })
-    .order('created_at', { ascending: false });
+  const firstDay = new Date(year, month, 1).toISOString().split("T")[0];
+  const lastDay = new Date(year, month + 1, 0).toISOString().split("T")[0];
 
-  const { data: goals } = await supabase
-    .from("goals")
-    .select("current_amount")
-    .eq("couple_id", profile.couple_id);
+  // Previous month range
+  const prevMonthDate = month === 0 ? { y: year - 1, m: 11 } : { y: year, m: month - 1 };
+  const prevFirstDay = new Date(prevMonthDate.y, prevMonthDate.m, 1).toISOString().split("T")[0];
+  const prevLastDay = new Date(prevMonthDate.y, prevMonthDate.m + 1, 0).toISOString().split("T")[0];
+
+  // Fetch everything in parallel
+  const [
+    { data: coupleData },
+    { data: profiles },
+    { data: transactions },
+    { data: prevTransactions },
+    { data: goals },
+  ] = await Promise.all([
+    supabase.from("couples").select("invite_code").eq("id", profile.couple_id).single(),
+    supabase.from("profiles").select("id, full_name, avatar_url").eq("couple_id", profile.couple_id),
+    supabase.from("transactions").select("*").eq("couple_id", profile.couple_id)
+      .gte("date", firstDay).lte("date", lastDay)
+      .order("date", { ascending: false }).order("created_at", { ascending: false }),
+    supabase.from("transactions").select("amount, type").eq("couple_id", profile.couple_id)
+      .gte("date", prevFirstDay).lte("date", prevLastDay),
+    supabase.from("goals").select("*").eq("couple_id", profile.couple_id),
+  ]);
+
+  // Debts (table may not exist)
+  let debts: Record<string, unknown>[] | null = null;
+  try {
+    const { data } = await supabase.from("debts").select("*").eq("couple_id", profile.couple_id).order("due_date", { ascending: true });
+    debts = data;
+  } catch { debts = null; }
 
   const txs = transactions || [];
+  const partnerProfile = profiles?.find((p) => p.id !== session.user.id);
+  const myName = profile.full_name?.split(" ")[0] || "Você";
+  const partnerName = partnerProfile?.full_name?.split(" ")[0] || "Parceiro(a)";
+  const myId = session.user.id;
+  const profileById = new Map((profiles || []).map((p) => [p.id, p]));
+  const getDebtOwner = (d: Record<string, unknown>, fallbackId = myId) => {
+    const ownerId = (d.user_id || d.profile_id || d.responsible_id || d.paid_by || d.paid_by_user_id || fallbackId) as string;
+    const owner = profileById.get(ownerId);
+    return {
+      userName: owner?.full_name?.split(" ")[0] || (ownerId === myId ? myName : partnerName),
+      avatarUrl: owner?.avatar_url || null,
+    };
+  };
 
-  // Cálculos de Resumo e Patrimônio
-  let totalExpenses = 0, myExpenses = 0, partnerExpenses = 0;
-  let totalIncome = 0, myIncome = 0, partnerIncome = 0;
-  let totalSaved = 0;
-  let totalDebt = 0;
-
-  if (goals) {
-    goals.forEach(g => {
-      totalSaved += Number(g.current_amount);
-    });
-  }
+  // Aggregate current month
+  let totalIncome = 0, totalExpenses = 0, myIncome = 0, partnerIncome = 0, myExpenses = 0, partnerExpenses = 0;
+  const categoryTotals: Record<string, number> = {};
 
   txs.forEach((t) => {
-    const amount = Number(t.amount);
-    if (t.type === "expense") {
-      totalExpenses += amount;
-      if (t.user_id === session.user.id) myExpenses += amount;
-      else partnerExpenses += amount;
-
-      if (t.category === 'Dívida' || t.category === 'Empréstimo') {
-        totalDebt += amount;
-      }
-    } else if (t.type === "income") {
-      totalIncome += amount;
-      if (t.user_id === session.user.id) myIncome += amount;
-      else partnerIncome += amount;
+    const amt = Number(t.amount);
+    if (t.type === "income") {
+      totalIncome += amt;
+      if (t.user_id === myId) myIncome += amt; else partnerIncome += amt;
+    } else {
+      totalExpenses += amt;
+      if (t.user_id === myId) myExpenses += amt; else partnerExpenses += amt;
+      categoryTotals[t.category] = (categoryTotals[t.category] || 0) + amt;
     }
   });
 
   const netBalance = totalIncome - totalExpenses;
+  const totalSaved = (goals || []).reduce((s, g) => s + Number(g.current_amount), 0);
+  const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
-  const currentDay = now.getDate();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const dailyAverage = currentDay > 0 ? totalExpenses / currentDay : 0;
-  const predictedTotal = dailyAverage * daysInMonth;
+  // Previous month totals (for comparison)
+  const prevMonthIncome = (prevTransactions || [])
+    .filter((t) => t.type === "income")
+    .reduce((s, t) => s + Number(t.amount), 0);
 
-  // Barra de Progresso
-  const metaGastos = 4000;
-  const progressPercent = Math.min((totalExpenses / metaGastos) * 100, 100);
+  const prevMonthExpenses = (prevTransactions || [])
+    .filter((t) => t.type === "expense")
+    .reduce((s, t) => s + Number(t.amount), 0);
 
-  // Filtros de transações
-  const recentIncomes = txs.filter(t => t.type === 'income').slice(0, 4);
-  const recentExpenses = txs.filter(t => t.type === 'expense').slice(0, 4);
+  // Top 5 categories
+  const topCategories = Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([cat, val]) => ({ cat, val, icon: CATEGORY_ICONS[cat] || "💸" }));
 
-  // Mês Atual
-  const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(now);
+  // Recent incomes (max 5)
+  const recentIncomes = txs.filter((t) => t.type === "income").slice(0, 5).map((t) => ({
+    id: t.id, description: t.description, amount: Number(t.amount),
+    date: t.date, userId: t.user_id, category: t.category,
+  }));
+
+  // Recent expenses (max 5)
+  const recentExpenses = txs.filter((t) => t.type === "expense").slice(0, 5).map((t) => ({
+    id: t.id, description: t.description, amount: Number(t.amount),
+    date: t.date, userId: t.user_id, category: t.category,
+  }));
+
+  // Timeline (day-by-day)
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const timelineData = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dayTxs = txs.filter((t) => t.date === dayStr);
+    return {
+      day: String(day),
+      receitas: dayTxs.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount), 0),
+      despesas: dayTxs.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0),
+    };
+  });
+
+  // Debts processing
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const in7Days = new Date(today); in7Days.setDate(in7Days.getDate() + 7);
+  const firstDayOfMonth = new Date(year, month, 1);
+  const lastDayOfMonth = new Date(year, month + 1, 0); lastDayOfMonth.setHours(23, 59, 59, 999);
+
+  const upcomingDebts = (debts || [])
+    .filter((d) => {
+      if (!d.due_date || d.status === "paid") return false;
+      const due = new Date(`${d.due_date as string}T00:00:00`);
+      return due >= today && due <= in7Days;
+    })
+    .slice(0, 5)
+    .map((d) => {
+      const owner = getDebtOwner(d);
+      return {
+        id: d.id as string,
+        title: d.title as string,
+        amount: Number(d.amount),
+        dueDate: d.due_date as string,
+        userName: owner.userName,
+        avatarUrl: owner.avatarUrl,
+      };
+    });
+
+  const paidThisMonth = (debts || [])
+    .filter((d) => {
+      if (d.status !== "paid" || !d.paid_at) return false;
+      const paidDate = new Date(d.paid_at as string);
+      return paidDate >= firstDayOfMonth && paidDate <= lastDayOfMonth;
+    })
+    .sort((a, b) => new Date(b.paid_at as string).getTime() - new Date(a.paid_at as string).getTime())
+    .slice(0, 5)
+    .map((d) => {
+      const owner = getDebtOwner(d);
+      return {
+        id: d.id as string,
+        title: d.title as string,
+        amount: Number(d.amount),
+        paidAt: d.paid_at as string,
+        userName: owner.userName,
+        avatarUrl: owner.avatarUrl,
+      };
+    });
+
+  // Goals
+  const goalsData = (goals || []).map((g) => ({
+    id: g.id, title: g.title,
+    current: Number(g.current_amount), target: Number(g.target_amount),
+    emoji: String((g as Record<string, unknown>).emoji || "").trim() || inferGoalEmoji(g.title),
+  }));
+
+  // Nav
+  const prevMonthNav = month === 0 ? { y: year - 1, m: 11 } : { y: year, m: month - 1 };
+  const nextMonthNav = month === 11 ? { y: year + 1, m: 0 } : { y: year, m: month + 1 };
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+
+  // Contribution pct
+  const totalContrib = myExpenses + partnerExpenses;
+  const myExpPct = totalContrib > 0 ? Math.round((myExpenses / totalContrib) * 100) : 50;
+  const partnerExpPct = 100 - myExpPct;
+
+  const totalIncomePeople = myIncome + partnerIncome;
+  const myIncPct = totalIncomePeople > 0 ? Math.round((myIncome / totalIncomePeople) * 100) : 50;
+  const partnerIncPct = 100 - myIncPct;
+
+  // Invite code
+  const showInvite = !!(profiles && profiles.length === 1 && coupleData?.invite_code);
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 lg:px-12 py-8 pb-24 space-y-12">
-      {!profile.has_biometrics && <BiometricOptIn userId={session.user.id} />}
-
-      <header className="flex justify-between items-start">
+    <div className="page-animate" style={{ background: "var(--bg-primary)", minHeight: "100dvh" }}>
+      {/* ── Sticky top bar ── */}
+      <div style={{
+        background: "var(--bg-card)",
+        borderBottom: "1px solid var(--border-color)",
+        padding: "14px 32px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "sticky", top: 0, zIndex: 20,
+      }}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 mt-1">
-            <Calendar size={16} />
-            <p className="capitalize font-medium">Exibindo dados de {currentMonthName}</p>
-          </div>
+          <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>Dashboard</p>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-primary)", textTransform: "capitalize" }}>
+            {getMonthLabel(year, month)}
+          </p>
         </div>
-        <form action="/auth/signout" method="POST">
-          <button className="p-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors bg-zinc-100 dark:bg-zinc-900 rounded-full">
-            <LogOut size={18} />
-          </button>
-        </form>
-      </header>
-
-      {/* Convite de Parceiro */}
-      {profiles && profiles.length === 1 && couple?.invite_code && (
-        <InvitePartnerCard inviteCode={couple.invite_code} />
-      )}
-
-      {txs.length === 0 && (
-        <form action={seedDummyData}>
-          <button className="w-full bg-zinc-800 text-indigo-400 border border-indigo-500/30 py-3 rounded-xl text-sm font-medium hover:bg-zinc-700 transition-colors">
-            + Gerar Dados de Teste
-          </button>
-        </form>
-      )}
-
-      {/* SEÇÃO 1: ENTRADAS E PATRIMÔNIO */}
-      <section className="relative">
-        <div className="absolute -left-4 md:-left-8 lg:-left-12 top-0 bottom-0 w-1.5 lg:w-2 bg-emerald-500 rounded-r-lg shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
-        <div className="flex items-center space-x-2 mb-6">
-          <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
-            <ArrowDownToLine size={20} />
-          </div>
-          <h2 className="text-xl font-bold text-emerald-400">Patrimônio e Entradas</h2>
+        <div className="month-selector">
+          <Link href={`/?y=${prevMonthNav.y}&m=${prevMonthNav.m}`} className="month-btn">
+            <ChevronLeft size={14} />
+          </Link>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", minWidth: 90, textAlign: "center", textTransform: "capitalize" }}>
+            {getMonthLabel(year, month).replace(" de ", " ")}
+          </span>
+          {!isCurrentMonth ? (
+            <Link href={`/?y=${nextMonthNav.y}&m=${nextMonthNav.m}`} className="month-btn">
+              <ChevronRight size={14} />
+            </Link>
+          ) : (
+            <span className="month-btn" style={{ opacity: 0.3, cursor: "not-allowed", pointerEvents: "none" }}>
+              <ChevronRight size={14} />
+            </span>
+          )}
         </div>
+      </div>
 
-        {/* Patrimônio Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-lg flex flex-col justify-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5">
-              <Wallet size={64} />
-            </div>
-            <h3 className="text-zinc-400 text-xs font-bold tracking-wider mb-2 uppercase">Saldo Líquido</h3>
-            <div className={`text-3xl font-bold tracking-tight ${netBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              R$ {netBalance.toFixed(2)}
-            </div>
-          </div>
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-lg flex flex-col justify-center relative overflow-hidden">
-            <h3 className="text-zinc-400 text-xs font-bold tracking-wider mb-2 uppercase">Cofrinho</h3>
-            <div className="text-3xl font-bold tracking-tight text-sky-400">R$ {totalSaved.toFixed(2)}</div>
-          </div>
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-lg flex flex-col justify-center relative overflow-hidden">
-            <h3 className="text-zinc-400 text-xs font-bold tracking-wider mb-2 uppercase">Dívidas</h3>
-            <div className="text-3xl font-bold tracking-tight text-rose-400">R$ {totalDebt.toFixed(2)}</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          <div className="lg:col-span-5">
-            <IncomePieChartCard myIncome={myIncome} partnerIncome={partnerIncome} partnerName={partnerName} />
-          </div>
-          <div className="lg:col-span-7">
-            <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-5 h-full flex flex-col">
-              <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">Últimas Entradas</h3>
-              <div className="space-y-3 flex-grow">
-                {recentIncomes.length > 0 ? recentIncomes.map(tx => (
-                  <div key={tx.id} className="bg-emerald-950/20 border border-emerald-900/30 rounded-xl p-3 flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full bg-emerald-900/50 flex items-center justify-center text-emerald-400">
-                        {getCategoryIcon(tx.category)}
-                      </div>
-                      <div>
-                        <p className="font-medium text-emerald-100 text-sm">{tx.description}</p>
-                        <p className="text-xs text-emerald-500/70 mt-0.5">
-                          {tx.user_id === session.user.id ? 'Você' : partnerName} • {formatRelativeDate(tx.date)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="font-bold text-emerald-400">
-                      + R$ {Number(tx.amount).toFixed(2)}
-                    </div>
-                  </div>
-                )) : (
-                  <div className="h-full flex items-center justify-center text-sm text-zinc-600">
-                    Nenhuma entrada de dinheiro recente.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SEÇÃO 2: GASTOS */}
-      <section className="relative">
-        <div className="absolute -left-4 md:-left-8 lg:-left-12 top-0 bottom-0 w-1.5 lg:w-2 bg-indigo-500 rounded-r-lg shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
-        <div className="flex items-center space-x-2 mb-6">
-          <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg">
-            <ArrowUpToLine size={20} />
-          </div>
-          <h2 className="text-xl font-bold text-indigo-400">Despesas do Casal</h2>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Card Total */}
-          <div className="lg:col-span-6">
-            <div className="bg-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-600/20 relative overflow-hidden h-full flex flex-col justify-between">
-              <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-              <div>
-                <p className="text-indigo-100 font-medium mb-1">Total Gasto no Mês</p>
-                <div className="text-4xl lg:text-5xl font-bold tracking-tight mb-6">
-                  R$ {totalExpenses.toFixed(2)}
-                </div>
-              </div>
-              
-              <div className="space-y-2 mt-4">
-                <div className="flex justify-between text-sm text-indigo-100 font-medium">
-                  <span>Orçamento Usado: {progressPercent.toFixed(1)}%</span>
-                  <span>Meta: R$ {metaGastos.toFixed(0)}</span>
-                </div>
-                <div className="h-3 w-full bg-black/20 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-1000 ${progressPercent > 90 ? 'bg-rose-400' : progressPercent > 70 ? 'bg-yellow-400' : 'bg-emerald-400'}`}
-                    style={{ width: `${progressPercent}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Cards Individuais */}
-          <div className="lg:col-span-3 flex">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-lg w-full flex flex-col justify-center relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <TrendingDown size={48} />
-              </div>
-              <h3 className="text-zinc-400 text-sm font-medium mb-2">Meu Gasto</h3>
-              <div className="text-3xl font-bold text-white">R$ {myExpenses.toFixed(2)}</div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-3 flex">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-lg w-full flex flex-col justify-center relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <TrendingDown size={48} />
-              </div>
-              <h3 className="text-zinc-400 text-sm font-medium mb-2">Gasto do Parceiro</h3>
-              <div className="text-3xl font-bold text-white">R$ {partnerExpenses.toFixed(2)}</div>
-            </div>
-          </div>
-
-          {/* Evolução Mensal (Largura Total) */}
-          <div className="lg:col-span-12 mt-2">
-            <AreaChartCard transactions={txs} predictedTotal={predictedTotal} budgetLimit={metaGastos} />
-          </div>
-
-          {/* Lista de Gastos Recentes e Gráfico de Categorias */}
-          <div className="lg:col-span-8">
-            <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-5 h-full">
-              <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4 flex items-center">
-                <Receipt size={16} className="mr-2" />
-                Últimas Despesas
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {recentExpenses.length > 0 ? recentExpenses.map(tx => (
-                  <div key={tx.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-sm flex flex-col">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-lg">
-                        {getCategoryIcon(tx.category)}
-                      </div>
-                      <div className="text-rose-400 font-bold bg-rose-500/10 px-2 py-1 rounded-md text-sm">
-                        - R$ {Number(tx.amount).toFixed(2)}
-                      </div>
-                    </div>
-                    <p className="font-medium text-white line-clamp-1">{tx.description}</p>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      {tx.user_id === session.user.id ? 'Você' : partnerName} • {formatRelativeDate(tx.date)}
-                    </p>
-                  </div>
-                )) : (
-                  <div className="col-span-full text-center text-sm text-zinc-600 py-4">
-                    Nenhuma despesa recente registrada.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="lg:col-span-4">
-            <ExpensePieChartCard transactions={txs} />
-          </div>
-        </div>
-      </section>
+      {/* ── All sections — managed by DashboardClient for hidden state ── */}
+      <DashboardClient
+        myName={myName}
+        partnerName={partnerName}
+        myId={myId}
+        netBalance={netBalance}
+        totalIncome={totalIncome}
+        totalExpenses={totalExpenses}
+        totalSaved={totalSaved}
+        savingsRate={savingsRate}
+        myExpenses={myExpenses}
+        partnerExpenses={partnerExpenses}
+        myExpPct={myExpPct}
+        partnerExpPct={partnerExpPct}
+        myIncome={myIncome}
+        partnerIncome={partnerIncome}
+        myIncPct={myIncPct}
+        partnerIncPct={partnerIncPct}
+        prevMonthIncome={prevMonthIncome}
+        prevMonthExpenses={prevMonthExpenses}
+        recentIncomes={recentIncomes}
+        recentExpenses={recentExpenses}
+        topCategories={topCategories}
+        timelineData={timelineData}
+        goals={goalsData}
+        upcomingDebts={upcomingDebts}
+        paidThisMonth={paidThisMonth}
+        hasDebtsTable={debts !== null}
+        inviteCode={showInvite ? coupleData!.invite_code : null}
+        avatarUrl={profile.avatar_url || null}
+      />
 
       <AddTransactionModal />
     </div>
