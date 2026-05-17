@@ -944,13 +944,17 @@ body.has-sidebar {
     padding: 8px 12px !important;
   }
 
-  /* Mini-cards (Receitas, Despesas, Cofrinho) nowrap or 2+1 grid */
-  .quick-glance-minicards {
+  /* Mini-cards (Receitas, Despesas, Cofrinho) mobile overrides */
+  .quick-glance-minicards-desktop {
+    display: none !important;
+  }
+  .quick-glance-minicards-mobile {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 10px !important;
+    gap: 8px !important;
+    overflow: hidden !important;
   }
-  .quick-glance-minicard:nth-child(3) {
+  .quick-glance-minicard-mob:nth-child(3) {
     grid-column: span 2 !important;
   }
 
@@ -960,9 +964,13 @@ body.has-sidebar {
   }
 
   /* Cards de Receitas e Despesas cortando à direita — usar grid: 1fr 1fr */
-  .analise-kpis-grid {
+  .analise-kpis-grid-desktop {
+    display: none !important;
+  }
+  .analise-kpis-grid-mobile {
+    display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 12px !important;
+    gap: 10px !important;
   }
 
   /* FAB button override (mobile only) */

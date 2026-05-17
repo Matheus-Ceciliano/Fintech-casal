@@ -166,8 +166,8 @@ export default async function AnalisePage({
 
       <div style={{ padding: "24px 32px 48px" }}>
 
-        {/* ── 4 KPI Cards ── */}
-        <div className="analise-kpis-grid">
+        {/* ── 4 KPI Cards DESKTOP ── */}
+        <div className="analise-kpis-grid-desktop">
           {[
             {
               label: "Receitas",
@@ -253,6 +253,96 @@ export default async function AnalisePage({
                 >
                   {k.icon}
                 </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── 4 KPI Cards MOBILE (hidden on desktop via CSS) ── */}
+        <div className="analise-kpis-grid-mobile" style={{ display: "none", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {[
+            {
+              label: "Receitas",
+              val: fmtCurrency(totalIncome),
+              color: "var(--income-color)",
+              bg: "var(--income-bg)",
+              border: "var(--income-color)",
+              icon: <TrendingUp size={14} color="var(--income-color)" />,
+            },
+            {
+              label: "Despesas",
+              val: fmtCurrency(totalExpenses),
+              color: "var(--expense-color)",
+              bg: "var(--expense-bg)",
+              border: "var(--expense-color)",
+              icon: <TrendingDown size={14} color="var(--expense-color)" />,
+            },
+            {
+              label: "Saldo",
+              val: fmtCurrency(netBalance),
+              color: netBalance >= 0 ? "var(--savings-color)" : "var(--expense-color)",
+              bg: netBalance >= 0 ? "var(--savings-bg)" : "var(--expense-bg)",
+              border: netBalance >= 0 ? "var(--savings-color)" : "var(--expense-color)",
+              icon: <PiggyBank size={14} color={netBalance >= 0 ? "var(--savings-color)" : "var(--expense-color)"} />,
+            },
+            {
+              label: "Taxa de Poupança",
+              val: `${savingsRate.toFixed(1)}%`,
+              color:
+                savingsRate >= 20
+                  ? "var(--income-color)"
+                  : savingsRate >= 0
+                  ? "#D97706"
+                  : "var(--expense-color)",
+              bg:
+                savingsRate >= 20
+                  ? "var(--income-bg)"
+                  : savingsRate >= 0
+                  ? "rgba(217,119,6,0.08)"
+                  : "var(--expense-bg)",
+              border:
+                savingsRate >= 20
+                  ? "var(--income-color)"
+                  : savingsRate >= 0
+                  ? "#D97706"
+                  : "var(--expense-color)",
+              icon: <Percent size={14} color={savingsRate >= 20 ? "var(--income-color)" : savingsRate >= 0 ? "#D97706" : "var(--expense-color)"} />,
+            },
+          ].map((k) => (
+            <div
+              key={k.label}
+              className="analise-kpi-card-mob"
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border-color)",
+                borderLeft: `4px solid ${k.border}`,
+                borderRadius: "var(--radius-card)",
+                padding: "12px",
+                boxShadow: "var(--shadow-card)",
+                minWidth: 0,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>
+                  {k.label}
+                </span>
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: k.bg,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  {k.icon}
+                </div>
+              </div>
+              <div style={{ fontSize: "clamp(15px, 4.2vw, 19px)", fontWeight: 700, color: k.color, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {k.val}
               </div>
             </div>
           ))}

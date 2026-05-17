@@ -33,6 +33,9 @@ function fmt(v: number) {
 function fmtCompact(v: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact" }).format(v);
 }
+function fmtNum(v: number) {
+  return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+}
 
 /** Get first + last initials from full name */
 function getInitials(name: string) {
@@ -153,8 +156,8 @@ export function DashboardClient(p: Props) {
           {/* Divider line before mini-cards */}
           <div style={{ height: 1, borderTop: "1px solid var(--dashboard-divider-color)", marginBottom: 16 }} />
 
-          {/* 3 mini-cards INSIDE the glass card */}
-          <div className="quick-glance-minicards" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          {/* 3 mini-cards DESKTOP */}
+          <div className="quick-glance-minicards-desktop" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             {[
               { label: "Receitas", icon: "↑", val: p.totalIncome, color: "#059669" },
               { label: "Despesas", icon: "↓", val: p.totalExpenses, color: "#DC2626" },
@@ -172,6 +175,33 @@ export function DashboardClient(p: Props) {
                 </div>
                 <div className="quick-glance-minicard-val" style={{ fontSize: "clamp(16px, 4.5vw, 22px)", fontWeight: 700, color: item.color, transition: "opacity 0.3s", wordBreak: "break-all" }}>
                   {h ? "••••" : fmtCompact(item.val)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 3 mini-cards MOBILE (hidden on desktop via CSS) */}
+          <div className="quick-glance-minicards-mobile" style={{ display: "none", gridTemplateColumns: "1fr 1fr", gap: 8, overflow: "hidden" }}>
+            {[
+              { label: "Receitas", icon: "↑", val: p.totalIncome, color: "#059669" },
+              { label: "Despesas", icon: "↓", val: p.totalExpenses, color: "#DC2626" },
+              { label: "Cofrinho", icon: null, val: p.totalSaved, color: "#4F46E5", piggy: true },
+            ].map(item => (
+              <div key={item.label} className="quick-glance-minicard-mob" style={{
+                background: "var(--dashboard-mini-bg)",
+                border: "var(--dashboard-mini-border)",
+                borderRadius: 14, padding: "12px 14px",
+                minWidth: 0,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    {item.piggy ? <PiggyBank size={13} color="#4F46E5" /> : <span style={{ fontSize: 13, fontWeight: 700, color: item.color }}>{item.icon}</span>}
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "#6B7280", whiteSpace: "nowrap" }}>{item.label}</span>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#6B7280" }}>R$</span>
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: item.color, transition: "opacity 0.3s", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {h ? "••••" : fmtNum(item.val)}
                 </div>
               </div>
             ))}
