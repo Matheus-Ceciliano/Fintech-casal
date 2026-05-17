@@ -259,7 +259,7 @@ export default async function AnalisePage({
         </div>
 
         {/* ── 4 KPI Cards MOBILE (hidden on desktop via CSS) ── */}
-        <div className="analise-kpis-grid-mobile" style={{ display: "none", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className="analise-kpis-grid-mobile" style={{ display: "none", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {[
             {
               label: "Receitas",

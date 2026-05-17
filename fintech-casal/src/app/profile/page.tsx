@@ -7,6 +7,14 @@ import { User, LogOut, Shield, Bell, Moon, Sun, ChevronRight, Lock, Delete, Fing
 import { isPWA } from "@/lib/pwa";
 import { hashPin, getStoredPinHash, setStoredPinHash, clearPin } from "@/lib/pin";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+
+type ConfirmDialog = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void | Promise<void>;
+};
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Record<string, any> | null>(null);
@@ -17,6 +25,7 @@ export default function ProfilePage() {
   const [canUseBiometrics, setCanUseBiometrics] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [coupleInfo, setCoupleInfo] = useState<{ invite_code?: string; member_count?: number } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
 
   // PIN Setup
   const [showPinSetup, setShowPinSetup] = useState(false);
@@ -76,9 +85,37 @@ export default function ProfilePage() {
   }
 
   const handleSignOut = async () => {
-    if (!confirm("Tem certeza que deseja sair?")) return;
-    await supabase.auth.signOut();
-    router.push("/login");
+    setConfirmDialog({
+      title: "Sair da conta",
+      message: "Tem certeza que deseja sair?",
+      confirmLabel: "Confirmar",
+      onConfirm: async () => {
+        await supabase.auth.signOut();
+        toast.info("Sua sessão expirou. Faça login novamente.");
+        router.push("/login");
+      },
+    });
+  };
+
+  const requestRemovePin = () => {
+    setConfirmDialog({
+      title: "Remover PIN",
+      message: "Tem certeza que deseja remover o PIN?",
+      confirmLabel: "Confirmar",
+      onConfirm: () => {
+        clearPin();
+        setHasPin(false);
+        setHasBiometrics(false);
+        localStorage.removeItem("biometria_preferida");
+        toast.success("PIN removido.");
+      },
+    });
+  };
+
+  const confirmModalAction = async () => {
+    if (!confirmDialog) return;
+    await confirmDialog.onConfirm();
+    setConfirmDialog(null);
   };
 
   const startPinSetup = () => { setSetupStep("create"); setSetupPin(""); setTempPin(""); setShowPinSetup(true); setSetupError(false); };
@@ -203,7 +240,7 @@ export default function ProfilePage() {
               <Lock size={18} color="#a78bfa" />, 'rgba(167,139,250,0.12)',
               'PIN de Acesso', hasPin ? 'PIN ativo — clique para remover' : 'Configurar PIN de 6 dígitos',
               <Toggle active={hasPin} />,
-              hasPin ? () => { if (confirm("Remover PIN?")) { clearPin(); setHasPin(false); setHasBiometrics(false); localStorage.removeItem("biometria_preferida"); } } : startPinSetup
+              hasPin ? requestRemovePin : startPinSetup
             )}
             {isPwaActive && hasPin && canUseBiometrics && settingRow(
               <Fingerprint size={18} color="#34d399" />, 'rgba(52,211,153,0.12)',
@@ -292,6 +329,50 @@ export default function ProfilePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {confirmDialog && (
+        <div
+          onClick={() => setConfirmDialog(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 400,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              background: "var(--bg-card)",
+              borderRadius: 20,
+              padding: 24,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              border: "1px solid var(--border-color)",
+            }}
+          >
+            <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "var(--text-primary)" }}>
+              {confirmDialog.title}
+            </h3>
+            <p style={{ margin: "0 0 22px", fontSize: 14, color: "var(--text-muted)", lineHeight: 1.5 }}>
+              {confirmDialog.message}
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button type="button" className="btn-ghost" onClick={() => setConfirmDialog(null)}>
+                Cancelar
+              </button>
+              <button type="button" className="btn-primary" onClick={confirmModalAction}>
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

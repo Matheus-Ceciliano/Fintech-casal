@@ -768,28 +768,41 @@ body.has-sidebar {
 
 .fab {
   position: fixed;
-  bottom: calc(var(--nav-height) + 16px);
-  right: 20px;
+  bottom: 88px;
+  right: 24px;
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--brand-gradient);
+  background: linear-gradient(135deg, #C850C0, #4158D0);
   color: white;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-cta);
+  box-shadow: 0 4px 20px rgba(200, 80, 192, 0.45);
   cursor: pointer;
   z-index: 40;
-  transition: transform 0.2s, box-shadow 0.2s;
+  animation: floatIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.fab:hover { transform: scale(1.08) translateY(-2px); box-shadow: 0 6px 28px rgba(200, 80, 192, 0.5); }
+.fab svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.8;
+  color: white;
+}
+
+.fab:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(200, 80, 192, 0.6); }
 .fab:active { transform: scale(0.95); }
 
 @media (min-width: 768px) {
   .fab { bottom: 24px; right: 32px; }
+}
+
+@keyframes floatIn {
+  from { transform: scale(0) rotate(-180deg); opacity: 0; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
 /* ═══════════════════════════════════════
@@ -913,6 +926,18 @@ body.has-sidebar {
   margin-bottom: 28px;
 }
 
+.analise-kpis-grid-desktop {
+  margin-bottom: 24px;
+}
+
+.analise-kpis-grid-mobile {
+  margin-bottom: 24px;
+}
+
+.analise-category-chart-card {
+  margin-top: 24px;
+}
+
 @media (max-width: 768px) {
   /* Breakpoint mobile: max-width 768px */
 
@@ -970,19 +995,24 @@ body.has-sidebar {
   .analise-kpis-grid-mobile {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 10px !important;
+    gap: 12px !important;
+    margin-bottom: 16px;
+  }
+
+  .analise-category-chart-card {
+    margin-top: 24px;
   }
 
   /* FAB button override (mobile only) */
   .fab {
     position: fixed !important;
-    bottom: 80px !important;
-    right: 20px !important;
+    bottom: 88px !important;
+    right: 24px !important;
     width: 56px !important;
     height: 56px !important;
     border-radius: 50% !important;
     background: linear-gradient(135deg, #C850C0, #4158D0) !important;
-    box-shadow: 0 4px 20px rgba(200, 80, 192, 0.4) !important;
+    box-shadow: 0 4px 20px rgba(200, 80, 192, 0.45) !important;
     z-index: 40 !important;
   }
 

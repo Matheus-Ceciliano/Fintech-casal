@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Plus, X, Loader2, Paperclip, ChevronDown } from "lucide-react";
 import { NumericFormat } from "react-number-format";
 import { addTransaction } from "@/app/actions";
+import { toast } from "sonner";
 
 const CATEGORIES = [
   { value: 'Alimentação', label: '🍔 Alimentação' },
@@ -44,8 +45,9 @@ export function AddTransactionModal() {
       setAmount("");
       setTxType("expense");
       setResponsible("both");
+      toast.success("Transação adicionada com sucesso!");
     } catch {
-      alert("Erro ao adicionar transação. Tente novamente.");
+      toast.error("Algo deu errado. Tente novamente.");
     } finally {
       setIsLoading(false);
     }

@@ -294,39 +294,55 @@ export async function withdrawFromGoal(formData: FormData) {
 }
 
 export async function updateGoal(formData: FormData) {
-  const cookieStore = await cookies();
-  // @ts-expect-error - auth-helpers expects a sync return
-  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  try {
+    const cookieStore = await cookies();
+    // @ts-expect-error - auth-helpers expects a sync return
+    const supabase = createServerActionClient({ cookies: () => cookieStore });
 
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError || !session) throw new Error("Não autenticado");
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) throw new Error("Não autenticado");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("couple_id")
-    .eq("id", session.user.id)
-    .single();
-  if (!profile?.couple_id) throw new Error("Grupo não encontrado");
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("couple_id")
+      .eq("id", session.user.id)
+      .single();
+    if (!profile?.couple_id) throw new Error("Grupo não encontrado");
 
-  const goalId = String(formData.get("goal_id") || "");
-  const title = String(formData.get("title") || "").trim();
-  const target_amount = parseFloat(String(formData.get("target_amount") || ""));
-  const emoji = String(formData.get("emoji") || "").trim() || "🐷";
-  const deadline = String(formData.get("deadline") || "").trim();
+    const id = String(formData.get("goal_id") || "");
+    const nome = String(formData.get("title") || "").trim();
+    const valor_alvo = parseFloat(String(formData.get("target_amount") || ""));
+    const emoji = String(formData.get("emoji") || "").trim() || "🐷";
+    const data_limite = String(formData.get("deadline") || "").trim();
 
-  if (!goalId) throw new Error("Cofrinho não encontrado");
-  if (!title) throw new Error("Nome do cofrinho é obrigatório");
-  if (!Number.isFinite(target_amount) || target_amount <= 0) throw new Error("Valor alvo inválido");
+    console.log("payload update cofrinho:", { id, nome, emoji, valor_alvo, data_limite });
 
-  const { error } = await supabase
-    .from("goals")
-    .update({ title, target_amount, emoji, deadline: deadline || null })
-    .eq("id", goalId)
-    .eq("couple_id", profile.couple_id);
+    if (!id) throw new Error("Cofrinho não encontrado");
+    if (!nome) throw new Error("Nome do cofrinho é obrigatório");
+    if (!Number.isFinite(valor_alvo) || valor_alvo <= 0) throw new Error("Valor alvo inválido");
 
-  if (error) throw new Error("Erro ao atualizar cofrinho");
-  revalidatePath("/metas");
-  revalidatePath("/");
+    const payload = {
+      title: nome,
+      target_amount: valor_alvo,
+      emoji,
+      deadline: data_limite || null,
+    };
+
+    const { error } = await supabase
+      .from("goals")
+      .update(payload)
+      .eq("id", id)
+      .eq("couple_id", profile.couple_id);
+
+    if (error) throw error;
+
+    revalidatePath("/metas");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao editar cofrinho:", error);
+    return { success: false, error: "Erro ao editar cofrinho. Tente novamente." };
+  }
 }
 
 export async function completeGoal(formData: FormData) {

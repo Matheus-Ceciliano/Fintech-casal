@@ -186,7 +186,7 @@ export function TransactionsClient({ transactions, myId, myName, partnerName }: 
         </div>
       )}
 
-      <div className="card transactions-list-card" style={{ padding: "8px 24px" }}>
+      <div className="card transactions-list-card" style={{ padding: "8px 0", overflow: "hidden" }}>
         {txs.length === 0 ? (
           <div className="empty-state">
             <span className="empty-state-icon">🔍</span>
@@ -204,11 +204,11 @@ export function TransactionsClient({ transactions, myId, myName, partnerName }: 
                 gap: 6,
                 padding: "14px 0",
                 borderBottom: "1px solid var(--border-subtle)",
-                background: idx % 2 === 0 ? "transparent" : "var(--border-subtle)",
+                background: idx % 2 === 0 ? "white" : "#F9FAFB",
               }}
             >
               {/* Linha superior = ícone + descrição + valor */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "0 24px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
                   <div
                     className="cat-icon"
@@ -254,7 +254,7 @@ export function TransactionsClient({ transactions, myId, myName, partnerName }: 
               </div>
 
               {/* Linha inferior = categoria badge + responsável + data */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 56, flexWrap: "wrap", fontSize: 12, color: "var(--text-muted)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 24px 0 80px", flexWrap: "wrap", fontSize: 12, color: "var(--text-muted)" }}>
                 <span className={`chip chip-${tx.type === "income" ? "green" : "red"}`}>
                   {tx.category}
                 </span>

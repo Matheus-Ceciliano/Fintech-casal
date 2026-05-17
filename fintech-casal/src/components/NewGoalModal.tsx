@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { addGoal } from "@/app/actions";
 import { NumericFormat } from "react-number-format";
+import { toast } from "sonner";
 
 const EMOJI_OPTIONS = ["💍", "✈️", "🚗", "🏠", "📚", "🛡️", "💊", "💻", "👶", "🐾", "🎉", "🎁", "🔨", "💼", "🐷"];
 
@@ -51,9 +52,10 @@ export function NewGoalModal() {
       await addGoal(formData);
       setIsOpen(false);
       reset();
+      toast.success("Cofrinho criado! 🐷");
     } catch (error) {
       console.error(error);
-      alert("Erro ao adicionar meta.");
+      toast.error("Algo deu errado. Tente novamente.");
     } finally {
       setIsLoading(false);
     }

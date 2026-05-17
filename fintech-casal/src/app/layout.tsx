@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { AppLockProvider } from "@/components/AppLockProvider";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "CasalFinance — Finanças a Dois",
@@ -74,6 +75,20 @@ export default async function RootLayout({
 
           {/* Mobile bottom nav — hidden on desktop via CSS */}
           {session && <BottomNav />}
+
+          <Toaster
+            position="top-center"
+            richColors
+            expand={false}
+            duration={3500}
+            toastOptions={{
+              style: {
+                borderRadius: "14px",
+                fontFamily: "inherit",
+                fontSize: "14px",
+              },
+            }}
+          />
         </AppLockProvider>
       </body>
     </html>

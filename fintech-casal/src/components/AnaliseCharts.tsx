@@ -48,7 +48,7 @@ export function AnaliseCharts({ categoryData, personData, timelineData, totalExp
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
 
       {/* Category donut */}
-      <div className="card" style={{ padding: 20 }}>
+      <div className="card analise-category-chart-card" style={{ padding: 20 }}>
         <div className="section-title">Gastos por Categoria</div>
         {!hasCategories ? (
           <div className="empty-state" style={{ padding: '20px 0' }}>

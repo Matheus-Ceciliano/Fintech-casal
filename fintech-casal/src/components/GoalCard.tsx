@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, Minus, X, Loader2, Calendar, MoreVertical } from "lucide-react";
 import { completeGoal, deleteGoal, depositToGoal, updateGoal, withdrawFromGoal } from "@/app/actions";
 import { NumericFormat } from "react-number-format";
+import { toast } from "sonner";
 
 interface Goal {
   id: string;
@@ -74,9 +75,10 @@ export function GoalCard({ goal }: { goal: Goal }) {
       formData.append("goal_id", goal.id);
       await depositToGoal(formData);
       setIsDepositOpen(false);
+      toast.success("Depósito realizado com sucesso!");
     } catch (error) {
       console.error(error);
-      alert("Erro ao realizar depósito.");
+      toast.error("Algo deu errado. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -89,11 +91,16 @@ export function GoalCard({ goal }: { goal: Goal }) {
       const formData = new FormData(e.currentTarget);
       formData.append("goal_id", goal.id);
       formData.set("emoji", editEmoji);
-      await updateGoal(formData);
+      const result = await updateGoal(formData);
+      if (!result.success) {
+        toast.error(result.error || "Erro ao editar cofrinho. Tente novamente.");
+        return;
+      }
       setIsEditOpen(false);
+      toast.success("Cofrinho atualizado!");
     } catch (error) {
-      console.error(error);
-      alert("Erro ao atualizar cofrinho.");
+      console.error("Erro ao editar cofrinho:", error);
+      toast.error("Erro ao editar cofrinho. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -106,9 +113,10 @@ export function GoalCard({ goal }: { goal: Goal }) {
       formData.append("goal_id", goal.id);
       await completeGoal(formData);
       setIsCompleteOpen(false);
+      toast.success("Cofrinho atualizado!");
     } catch (error) {
       console.error(error);
-      alert("Erro ao concluir cofrinho.");
+      toast.error("Algo deu errado. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -122,9 +130,10 @@ export function GoalCard({ goal }: { goal: Goal }) {
       if (returnBalanceBeforeDelete) formData.append("return_balance", "true");
       await deleteGoal(formData);
       setIsDeleteOpen(false);
+      toast.success("Cofrinho excluído.");
     } catch (error) {
       console.error(error);
-      alert("Erro ao excluir cofrinho.");
+      toast.error("Algo deu errado. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -144,10 +153,11 @@ export function GoalCard({ goal }: { goal: Goal }) {
       formData.append("goal_id", goal.id);
       await withdrawFromGoal(formData);
       setIsWithdrawOpen(false);
+      toast.success("Resgate realizado!");
     } catch (error: unknown) {
       const err = error as Error;
       console.error(error);
-      alert(err.message || "Erro ao realizar resgate.");
+      toast.error(err.message || "Algo deu errado. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -736,6 +746,7 @@ export function GoalCard({ goal }: { goal: Goal }) {
           </div>
         </div>
       )}
+
     </div>
   );
 }
