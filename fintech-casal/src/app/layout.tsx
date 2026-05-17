@@ -44,16 +44,14 @@ export default async function RootLayout({
 
   let hasBiometrics = false;
   let theme = "light";
-  let shouldShowNavigation = false;
   if (session) {
     const { data } = await supabase
       .from("profiles")
-      .select("has_biometrics, theme_preference, couple_id")
+      .select("has_biometrics, theme_preference")
       .eq("id", session.user.id)
       .single();
     hasBiometrics = data?.has_biometrics || false;
     theme = data?.theme_preference || "light";
-    shouldShowNavigation = Boolean(data?.couple_id);
   }
 
   return (
@@ -62,10 +60,10 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body className={shouldShowNavigation ? "has-sidebar" : ""}>
+      <body className={session ? "has-sidebar" : ""}>
         <AppLockProvider requireLock={hasBiometrics}>
           {/* Desktop sidebar — hidden on mobile via CSS */}
-          {shouldShowNavigation && (
+          {session && (
             <div className="sidebar-wrapper">
               <Sidebar />
             </div>
@@ -76,7 +74,7 @@ export default async function RootLayout({
           </main>
 
           {/* Mobile bottom nav — hidden on desktop via CSS */}
-          {shouldShowNavigation && <BottomNav />}
+          {session && <BottomNav />}
 
           <Toaster
             position="top-center"
