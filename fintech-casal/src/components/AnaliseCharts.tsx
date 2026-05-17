@@ -66,7 +66,7 @@ export function AnaliseCharts({ categoryData, personData, timelineData, totalExp
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: number, name: string) => [
+                  formatter={(val: any, name: any) => [
                     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val),
                     name,
                   ]}

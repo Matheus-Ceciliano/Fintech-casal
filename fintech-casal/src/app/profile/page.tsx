@@ -9,7 +9,7 @@ import { hashPin, getStoredPinHash, setStoredPinHash, clearPin } from "@/lib/pin
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
+  const [profile, setProfile] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPwaActive, setIsPwaActive] = useState(false);
   const [hasPin, setHasPin] = useState(false);
