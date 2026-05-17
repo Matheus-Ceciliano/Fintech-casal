@@ -227,16 +227,15 @@ export default async function AnalisePage({
                 borderRadius: "var(--radius-card)",
                 padding: "18px 20px",
                 boxShadow: "var(--shadow-card)",
-                overflow: "hidden",
                 minWidth: 0,
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>
                     {k.label}
                   </p>
-                  <p style={{ fontSize: "clamp(16px, 4.5vw, 20px)", fontWeight: 700, color: k.color, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <p style={{ fontSize: "clamp(15px, 4vw, 20px)", fontWeight: 700, color: k.color, margin: 0, wordBreak: "break-all" }}>
                     {k.val}
                   </p>
                 </div>

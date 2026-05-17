@@ -164,13 +164,13 @@ export function DashboardClient(p: Props) {
                 background: "var(--dashboard-mini-bg)",
                 border: "var(--dashboard-mini-border)",
                 borderRadius: 14, padding: "var(--dashboard-mini-padding)",
-                overflow: "hidden", minWidth: 0,
+                minWidth: 0,
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
                   {item.piggy ? <PiggyBank size={13} color="#4F46E5" /> : <span style={{ fontSize: 13, fontWeight: 700, color: item.color }}>{item.icon}</span>}
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--dashboard-hero-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "var(--dashboard-hero-text)", whiteSpace: "nowrap" }}>{item.label}</span>
                 </div>
-                <div className="quick-glance-minicard-val" style={{ fontSize: "clamp(16px, 4.5vw, 22px)", fontWeight: 700, color: item.color, transition: "opacity 0.3s", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div className="quick-glance-minicard-val" style={{ fontSize: "clamp(16px, 4.5vw, 22px)", fontWeight: 700, color: item.color, transition: "opacity 0.3s", wordBreak: "break-all" }}>
                   {h ? "••••" : fmtCompact(item.val)}
                 </div>
               </div>

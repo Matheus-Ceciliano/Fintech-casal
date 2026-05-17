@@ -115,41 +115,42 @@ export function TransactionsClient({ transactions, myId, myName, partnerName }: 
       <div className="metrics-row">
         <div className="metric-card income">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Receitas
               </p>
-              <p style={{ fontSize: 22, fontWeight: 700, color: "var(--income-color)", margin: 0 }}>
+              <p style={{ fontSize: "clamp(16px, 4.5vw, 22px)", fontWeight: 700, color: "var(--income-color)", margin: 0, wordBreak: "break-all" }}>
                 {formatCurrency(totalIncome)}
               </p>
             </div>
-            <TrendingUp size={20} color="var(--income-color)" />
+            <TrendingUp size={20} color="var(--income-color)" style={{ flexShrink: 0 }} />
           </div>
         </div>
         <div className="metric-card expense">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Despesas
               </p>
-              <p style={{ fontSize: 22, fontWeight: 700, color: "var(--expense-color)", margin: 0 }}>
+              <p style={{ fontSize: "clamp(16px, 4.5vw, 22px)", fontWeight: 700, color: "var(--expense-color)", margin: 0, wordBreak: "break-all" }}>
                 {formatCurrency(totalExpenses)}
               </p>
             </div>
-            <TrendingDown size={20} color="var(--expense-color)" />
+            <TrendingDown size={20} color="var(--expense-color)" style={{ flexShrink: 0 }} />
           </div>
         </div>
         <div className="metric-card balance">
-          <div>
+          <div style={{ minWidth: 0 }}>
             <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Saldo
             </p>
             <p
               style={{
-                fontSize: 22,
+                fontSize: "clamp(16px, 4.5vw, 22px)",
                 fontWeight: 700,
                 color: totalIncome - totalExpenses >= 0 ? "var(--savings-color)" : "var(--expense-color)",
                 margin: 0,
+                wordBreak: "break-all",
               }}
             >
               {formatCurrency(totalIncome - totalExpenses)}
@@ -185,7 +186,7 @@ export function TransactionsClient({ transactions, myId, myName, partnerName }: 
         </div>
       )}
 
-      <div className="card" style={{ padding: "8px 24px" }}>
+      <div className="card transactions-list-card" style={{ padding: "8px 24px" }}>
         {txs.length === 0 ? (
           <div className="empty-state">
             <span className="empty-state-icon">🔍</span>

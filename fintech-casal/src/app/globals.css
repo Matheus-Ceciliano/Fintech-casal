@@ -964,4 +964,45 @@ body.has-sidebar {
     grid-template-columns: 1fr 1fr !important;
     gap: 12px !important;
   }
+
+  /* FAB button override (mobile only) */
+  .fab {
+    position: fixed !important;
+    bottom: 80px !important;
+    right: 20px !important;
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #C850C0, #4158D0) !important;
+    box-shadow: 0 4px 20px rgba(200, 80, 192, 0.4) !important;
+    z-index: 40 !important;
+  }
+
+  /* Padding bottom na lista de transações para não esconder o último item atrás do botão */
+  .transactions-list-card {
+    padding-bottom: 80px !important;
+  }
+
+  /* Header do Dashboard no Mobile */
+  .dashboard-top-bar {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .dashboard-header-title {
+    font-size: 18px !important;
+    white-space: nowrap !important;
+  }
+  .month-selector {
+    padding: 4px 8px !important;
+    gap: 4px !important;
+  }
+  .month-selector-label {
+    font-size: 13px !important;
+    min-width: auto !important;
+    padding: 0 4px !important;
+  }
 }

@@ -244,7 +244,7 @@ export default async function Home({
   return (
     <div className="page-animate" style={{ background: "var(--bg-primary)", minHeight: "100dvh" }}>
       {/* ── Sticky top bar ── */}
-      <div style={{
+      <div className="dashboard-top-bar" style={{
         background: "var(--bg-card)",
         borderBottom: "1px solid var(--border-color)",
         padding: "14px 32px",
@@ -252,18 +252,16 @@ export default async function Home({
         alignItems: "center",
         justifyContent: "space-between",
         position: "sticky", top: 0, zIndex: 20,
+        gap: 12,
       }}>
-        <div>
-          <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>Dashboard</p>
-          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-primary)", textTransform: "capitalize" }}>
-            {getMonthLabel(year, month)}
-          </p>
-        </div>
+        <h1 className="dashboard-header-title" style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "var(--text-primary)" }}>
+          Dashboard
+        </h1>
         <div className="month-selector">
           <Link href={`/?y=${prevMonthNav.y}&m=${prevMonthNav.m}`} className="month-btn">
             <ChevronLeft size={14} />
           </Link>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", minWidth: 90, textAlign: "center", textTransform: "capitalize" }}>
+          <span className="month-selector-label" style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", minWidth: 90, textAlign: "center", textTransform: "capitalize" }}>
             {getMonthLabel(year, month).replace(" de ", " ")}
           </span>
           {!isCurrentMonth ? (
